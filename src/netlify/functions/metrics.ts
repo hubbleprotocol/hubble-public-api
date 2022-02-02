@@ -137,9 +137,10 @@ export const handler: Handler = async (event, context) => {
     // response.usdh.issuedHistory
     response.usdh.stabilityPoolDistribution = getPercentiles(stabilityHistogram);
     response.usdh.issued = borrowingMarketState.stablecoinBorrowed / STABLECOIN_DECIMALS;
+    const saberStats = await saberService.getStats();
     response.usdh.saber = {
-      price: await saberService.getUsdhPrice(),
-      liquidityPool: saberService.getUsdhLiquidity(),
+      price: saberStats.price,
+      liquidityPool: saberStats.liquidityPool,
     };
     //TODO
     // response.usdh.mercurialLiquidityPool

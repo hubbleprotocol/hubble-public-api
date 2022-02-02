@@ -147,6 +147,9 @@ export const HUBBLE_CONFIGS: HubbleConfig[] = [
             asksAddress: new PublicKey('PPnJy6No31U45SVSjWTr45R8Q73X6bNHfxdFqr2vMq3'),
           },
         },
+        saber: {
+          stablecoinSwap: new PublicKey('MARpDPs5A7XiyCWPNH8GsMWPLxmwNn9SBmKvPa9LzgA'),
+        },
       },
     },
   },
@@ -227,6 +230,9 @@ export const HUBBLE_CONFIGS: HubbleConfig[] = [
         burningVaultAuthority: undefined,
         collateralVaultsAuthority: undefined,
         hbbMintAuthority: undefined,
+        saber: {
+          stablecoinSwap: new PublicKey('MARpDPs5A7XiyCWPNH8GsMWPLxmwNn9SBmKvPa9LzgA'),
+        },
       },
     },
   },
@@ -374,6 +380,9 @@ export const HUBBLE_CONFIGS: HubbleConfig[] = [
           },
         },
         USDC: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
+        saber: {
+          stablecoinSwap: new PublicKey('MARpDPs5A7XiyCWPNH8GsMWPLxmwNn9SBmKvPa9LzgA'),
+        },
       },
     },
   },
@@ -450,6 +459,9 @@ export const HUBBLE_CONFIGS: HubbleConfig[] = [
         USDC: undefined,
         serumMarkets: undefined,
         redemptionCandidatesQueue: undefined,
+        saber: {
+          stablecoinSwap: new PublicKey('MARpDPs5A7XiyCWPNH8GsMWPLxmwNn9SBmKvPa9LzgA'),
+        },
       },
     },
   },
