@@ -36,6 +36,9 @@
     "@solana/spl-token-registry": "^0.2.1619",
     "@solana/web3.js": "^1.31.0",
     "decimal.js": "^10.3.1",
-    "hdr-histogram-js": "^3.0.0"
+    "hdr-histogram-js": "^3.0.0",
+    "@saberhq/stableswap-sdk": "^1.12.36",
+    "jsbi": "^4.1.0",
+    "@solana/buffer-layout": "^4.0.0"
   }
 }

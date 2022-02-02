@@ -15,6 +15,7 @@ import {
   getTokenCollateral,
   getTotalCollateral,
 } from '../../utils/calculations';
+import { SaberPriceService } from '../../services/price/SaberPriceService';
 
 export const handler: Handler = async (event, context) => {
   let env: ENV = 'mainnet-beta';
@@ -39,6 +40,7 @@ export const handler: Handler = async (event, context) => {
     const borrowingClient = new BorrowingClient(web3Client.connection, env);
     const serumService = createSerumMarketService();
     const orcaService = new OrcaPriceService();
+    const saberService = new SaberPriceService();
 
     const borrowingMarketState = await borrowingClient.getBorrowingMarketState();
     const markets = await serumService.getMarkets(MINT_ADDRESSES, 'confirmed');
@@ -115,8 +117,7 @@ export const handler: Handler = async (event, context) => {
     // response.hbb.holdersHistory
     // response.hbb.priceHistory
 
-    response.revenue =
-      stakingPool.totalDistributedRewards / 0.85 / HBB_DECIMALS;
+    response.revenue = stakingPool.totalDistributedRewards / 0.85 / HBB_DECIMALS;
 
     // borrowing
     response.borrowing.numberOfBorrowers = borrowers.size;
@@ -136,11 +137,13 @@ export const handler: Handler = async (event, context) => {
     // response.usdh.issuedHistory
     response.usdh.stabilityPoolDistribution = getPercentiles(stabilityHistogram);
     response.usdh.issued = borrowingMarketState.stablecoinBorrowed / STABLECOIN_DECIMALS;
+    response.usdh.saber = {
+      price: await saberService.getUsdhPrice(),
+      liquidityPool: saberService.getUsdhLiquidity(),
+    };
     //TODO
     // response.usdh.mercurialLiquidityPool
     // response.usdh.mercurialPrice
-    // response.usdh.saberLiquidityPool
-    // response.usdh.saberPrice
 
     //circulating supply
     response.circulatingSupplyValue = (hbbMint.uiAmount as number) * hbbPrice;
