@@ -16,6 +16,7 @@ import {
   getTotalCollateral,
 } from '../../utils/calculations';
 import { SaberPriceService } from '../../services/price/SaberPriceService';
+import {JupiterPriceService} from "../../services/price/JupiterPriceService";
 
 export const handler: Handler = async (event, context) => {
   let env: ENV = 'mainnet-beta';
@@ -41,6 +42,7 @@ export const handler: Handler = async (event, context) => {
     const serumService = createSerumMarketService();
     const orcaService = new OrcaPriceService();
     const saberService = new SaberPriceService();
+    const jupiterService = new JupiterPriceService();
 
     const borrowingMarketState = await borrowingClient.getBorrowingMarketState();
     const markets = await serumService.getMarkets(MINT_ADDRESSES, 'confirmed');
@@ -138,13 +140,15 @@ export const handler: Handler = async (event, context) => {
     response.usdh.stabilityPoolDistribution = getPercentiles(stabilityHistogram);
     response.usdh.issued = borrowingMarketState.stablecoinBorrowed / STABLECOIN_DECIMALS;
     const saberStats = await saberService.getStats();
+    const jupiterStats = await jupiterService.getStats();
     response.usdh.saber = {
       price: saberStats.price,
       liquidityPool: saberStats.liquidityPool,
     };
-    //TODO
-    // response.usdh.mercurialLiquidityPool
-    // response.usdh.mercurialPrice
+    response.usdh.jupiter = {
+      price: jupiterStats.price,
+      liquidityPool: jupiterStats.liquidityPool
+    }
 
     //circulating supply
     response.circulatingSupplyValue = (hbbMint.uiAmount as number) * hbbPrice;

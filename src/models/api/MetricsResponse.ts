@@ -74,7 +74,7 @@ export const getMockResponse = (): MetricsResponse => {
     usdh: {
       issued: 800_000_000,
       history: getMockHistory(new Date('2021-01-01'), new Date('2021-01-02')),
-      mercurial: {
+      jupiter: {
         price: 1.0001,
         liquidityPool: 5_500_000.23,
       },

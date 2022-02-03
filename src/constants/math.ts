@@ -5,6 +5,7 @@ export const DECIMALS_BTC = 1_000_000;
 export const DECIMALS_FTT = 1_000_000;
 export const DECIMALS_RAY = 1_000_000;
 export const DECIMALS_SRM = 1_000_000;
+export const DECIMALS_USDC = 1_000_000;
 
 export const HBB_DECIMALS = 1_000_000;
 export const STABLECOIN_DECIMALS = 1_000_000;
