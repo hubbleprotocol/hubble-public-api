@@ -2,6 +2,7 @@ import { PublicKey } from '@solana/web3.js';
 import { PythConfig } from './PythConfig';
 import { VaultConfig } from './VaultConfig';
 import { SerumMarketsConfig } from './SerumMarketsConfig';
+import { SaberConfig } from './SaberConfig';
 
 export type BorrowingConfig = {
   programId: PublicKey;
@@ -63,5 +64,6 @@ export type BorrowingConfig = {
 
     pyth: PythConfig | undefined;
     serumMarkets: SerumMarketsConfig | undefined;
+    saber: SaberConfig;
   };
 };
