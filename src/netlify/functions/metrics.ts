@@ -17,13 +17,7 @@ import {
 } from '../../utils/calculations';
 import { SaberPriceService } from '../../services/price/SaberPriceService';
 
-// GET /metrics - returns public Hubble stats
-export const handler: Handler = async (event, context) => {
-  let env: ENV = 'mainnet-beta';
-  if (event?.queryStringParameters?.env) {
-    env = event.queryStringParameters.env as ENV;
-  }
-
+const getMetrics = async (env: ENV) => {
   let web3Client: Web3Client;
   try {
     web3Client = new Web3Client(env);
@@ -98,14 +92,14 @@ export const handler: Handler = async (event, context) => {
       price: x.price,
     }));
     response.collateral.ratioDistribution = getPercentiles(collateralHistogram)
-      .filter((x) => x.value > 0)
-      .map((x) => {
-        x.value /= 100;
-        return x;
-      });
+        .filter((x) => x.value > 0)
+        .map((x) => {
+          x.value /= 100;
+          return x;
+        });
     response.collateral.collateralRatio = calculateCollateralRatio(
-      borrowingMarketState.stablecoinBorrowed / STABLECOIN_DECIMALS,
-      collateral.deposited
+        borrowingMarketState.stablecoinBorrowed / STABLECOIN_DECIMALS,
+        collateral.deposited
     );
 
     // hbb
@@ -114,9 +108,6 @@ export const handler: Handler = async (event, context) => {
     response.hbb.price = hbbPrice;
     response.hbb.issued = hbbMint.uiAmount as number;
     response.hbb.numberOfHolders = hbbProgramAccounts.length;
-    //todo: after snapshots are added to DB
-    // response.hbb.holdersHistory
-    // response.hbb.priceHistory
 
     response.revenue = stakingPool.totalDistributedRewards / 0.85 / HBB_DECIMALS;
 
@@ -129,13 +120,9 @@ export const handler: Handler = async (event, context) => {
     response.borrowing.loans.min = loansHistogram.totalCount > 0 ? loansHistogram.minNonZeroValue : 0;
     response.borrowing.loans.average = loansHistogram.mean;
     response.borrowing.loans.median = loansHistogram.getValueAtPercentile(50);
-    //todo: after snapshots are added to DB
-    // response.borrowing.loans.history
-    // response.borrowing.borrowersHistory
 
     //usdh
     response.usdh.stabilityPool = totalUsdh;
-    // response.usdh.issuedHistory
     response.usdh.stabilityPoolDistribution = getPercentiles(stabilityHistogram);
     response.usdh.issued = borrowingMarketState.stablecoinBorrowed / STABLECOIN_DECIMALS;
     const saberStats = await saberService.getStats();
@@ -166,4 +153,14 @@ export const handler: Handler = async (event, context) => {
     stabilityHistogram.destroy();
     collateralHistogram.destroy();
   }
+};
+
+// GET /metrics - returns public Hubble stats
+export const handler: Handler = async (event, context) => {
+  let env: ENV = 'mainnet-beta';
+  if (event?.queryStringParameters?.env) {
+    env = event.queryStringParameters.env as ENV;
+  }
+
+  return await getMetrics(env);
 };

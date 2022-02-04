@@ -23,3 +23,11 @@ export const internalError = (error: any) => {
     headers: headers,
   };
 };
+
+export const customError = (error: any, statusCode: number) => {
+  return {
+    statusCode: statusCode,
+    body: JSON.stringify({ error: error }),
+    headers: headers,
+  };
+};

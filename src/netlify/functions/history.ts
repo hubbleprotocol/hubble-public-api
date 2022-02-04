@@ -1,4 +1,3 @@
-// GET /metrics - returns public Hubble stats
 import {Handler} from "@netlify/functions";
 import {ok} from "../../utils/apiUtils";
 import {TimestampValueResponse} from "../../models/api/TimestampValueResponse";

@@ -4,7 +4,7 @@ Hubble Public API is a TypeScript API that serves public data of the Hubble Prot
 
 ## Development
 
-### Local Setup
+### Local API Setup
 You will need to use [npm](https://www.npmjs.com/) to install the dependencies. 
 You will also need to install [Netlify CLI](https://docs.netlify.com/cli/get-started/) to run and debug locally.
 
@@ -26,6 +26,31 @@ Run the application by launching a Netlify development server:
 ```shell
 cd hubble-public-api
 npm run netlify
+```
+
+### Local DynamoDB Setup
+
+Our scheduled Netlify function [snapshot.ts](src/netlify/functions/snapshot.ts) saves metrics to DynamoDB. 
+If you want to test this locally without using actual AWS service you can use docker to run a local DynamoDB instance:
+
+```shell
+# go to docker folder
+cd hubble-public-api/docker
+
+# spin up DynamoDB locally with persistent database data in hubble-public-api/docker/dynamodb/data/shared-local-instance.db
+docker-compose up 
+
+# create required tables - this is only required once after first setup, all the data will be persisted on disk
+chmod +x create-dynamodb-tables.sh
+./create-dynamodb-tables.sh
+```
+
+Local instance will be started on http://localhost:8000.
+
+Before you can invoke the Netlify functions you will also have to add this environment variable to `.env` file (see `.env.example`):
+
+```dotenv
+DYNAMODB_ENDPOINT=http://localhost:8000
 ```
 
 ### Deployment
@@ -52,6 +77,20 @@ You may also specify the environment (`mainnet-beta`[default],`devnet`,`localnet
 
 ```http request
 GET https://api.hubbleprotocol.io/metrics?env=devnet
+```
+
+### Metrics History
+
+Get `mainnet-beta` metrics of Hubble Protocol:
+
+```http request
+GET https://api.hubbleprotocol.io/history
+```
+
+You may also specify the environment (`mainnet-beta`[default],`devnet`,`localnet`,`testnet`) by using an `env` query parameter:
+
+```http request
+GET https://api.hubbleprotocol.io/history?env=devnet
 ```
 
 ### Config
