@@ -17,6 +17,7 @@ import {
 } from '../../utils/calculations';
 import { SaberPriceService } from '../../services/price/SaberPriceService';
 
+// GET /metrics - returns public Hubble stats
 export const handler: Handler = async (event, context) => {
   let env: ENV = 'mainnet-beta';
   if (event?.queryStringParameters?.env) {
