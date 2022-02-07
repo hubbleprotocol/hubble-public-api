@@ -4,20 +4,21 @@ import { internalError, ok } from '../../utils/apiUtils';
 import { ENV } from '../../services/web3/client';
 
 export const handler: Handler = (event, context) => {
+  console.log('does this even work?');
   return ok({ test: 'test1234' });
 
-  let env: ENV | undefined;
-  if (event?.queryStringParameters?.env) {
-    env = event.queryStringParameters.env as ENV;
-  }
-  try {
-    if (env) {
-      return ok(getConfigByEnv(env));
-    }
-
-    return ok(HUBBLE_CONFIGS);
-  } catch (e) {
-    console.error(e);
-    return internalError(e);
-  }
+  // let env: ENV | undefined;
+  // if (event?.queryStringParameters?.env) {
+  //   env = event.queryStringParameters.env as ENV;
+  // }
+  // try {
+  //   if (env) {
+  //     return ok(getConfigByEnv(env));
+  //   }
+  //
+  //   return ok(HUBBLE_CONFIGS);
+  // } catch (e) {
+  //   console.error(e);
+  //   return internalError(e);
+  // }
 };
