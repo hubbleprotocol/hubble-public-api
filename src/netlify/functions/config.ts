@@ -3,7 +3,7 @@ import { getConfigByEnv, HUBBLE_CONFIGS } from '../../services/hubble/hubbleConf
 import { ok } from '../../utils/apiUtils';
 import { ENV } from '../../services/web3/client';
 
-export const handler: Handler = (event, context) => {
+export const handler: Handler = async (event, context) => {
   let env: ENV | undefined;
   if (event?.queryStringParameters?.env) {
     env = event.queryStringParameters.env as ENV;
