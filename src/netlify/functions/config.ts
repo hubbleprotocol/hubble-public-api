@@ -4,6 +4,8 @@ import { internalError, ok } from '../../utils/apiUtils';
 import { ENV } from '../../services/web3/client';
 
 export const handler: Handler = (event, context) => {
+  return ok({ test: 'test1234' });
+
   let env: ENV | undefined;
   if (event?.queryStringParameters?.env) {
     env = event.queryStringParameters.env as ENV;
