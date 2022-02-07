@@ -13,6 +13,6 @@ export type UsdhResponse = {
   stabilityPoolDistribution: PercentileResponse[];
   // Price and liquidity pool values obtained from Saber
   saber: PriceResponse;
-  // Price and liquidity pool values obtained from Mercurial
-  mercurial: PriceResponse;
+  // Price and liquidity pool values obtained from Jupiter
+  jupiter: PriceResponse;
 };
