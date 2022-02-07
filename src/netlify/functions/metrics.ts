@@ -16,9 +16,9 @@ import {
   getTotalCollateral,
 } from '../../utils/calculations';
 import { SaberPriceService } from '../../services/price/SaberPriceService';
-import {JupiterPriceService} from "../../services/price/JupiterPriceService";
+import { JupiterPriceService } from '../../services/price/JupiterPriceService';
 
-export const handler: Handler = async (event, context) => {
+const handler: Handler = async (event, context) => {
   let env: ENV = 'mainnet-beta';
   if (event?.queryStringParameters?.env) {
     env = event.queryStringParameters.env as ENV;
@@ -147,8 +147,8 @@ export const handler: Handler = async (event, context) => {
     };
     response.usdh.jupiter = {
       price: jupiterStats.price,
-      liquidityPool: jupiterStats.liquidityPool
-    }
+      liquidityPool: jupiterStats.liquidityPool,
+    };
 
     //circulating supply
     response.circulatingSupplyValue = (hbbMint.uiAmount as number) * hbbPrice;
@@ -170,3 +170,5 @@ export const handler: Handler = async (event, context) => {
     collateralHistogram.destroy();
   }
 };
+
+export { handler };
