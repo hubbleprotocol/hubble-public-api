@@ -1,5 +1,5 @@
 import { Handler } from '@netlify/functions';
-import { internalError, ok } from '../../utils/apiUtils';
+import { badGateway, badRequest, internalError, ok } from '../../utils/apiUtils';
 import { TimestampValueResponse } from '../../models/api/TimestampValueResponse';
 import { ENV } from '../../services/web3/client';
 import { getSnapshotEnvVariables } from '../../services/environmentService';
@@ -18,20 +18,22 @@ const getHistory = async (env: ENV, fromEpoch: number, toEpoch: number) => {
     const history = await dynamoDb
       .query({
         TableName: 'metrics',
-        KeyConditionExpression: '#env = :envValue',
-        ExpressionAttributeNames: { '#env': 'environment' }, //environment is a reserved word so we replace it with #env
-        ExpressionAttributeValues: { ':envValue': env },
+        KeyConditionExpression: '#env = :envValue and createdOn between :fromEpoch and :toEpoch',
+        ExpressionAttributeNames: { '#env': 'environment' }, //environment is a dynamodb reserved word, so we replace it with #env
+        ExpressionAttributeValues: { ':envValue': env, ':fromEpoch': fromEpoch, ':toEpoch': toEpoch },
       })
       .promise();
     const response: HistoryResponse = {
+      startDate: fromEpoch,
+      endDate: toEpoch,
       borrowersHistory: [],
       hbbHoldersHistory: [],
       hbbPriceHistory: [],
       loansHistory: [],
       usdhHistory: [],
     };
-    if (history?.Count) {
-      for (const key of history.Items!) {
+    if (history?.Items) {
+      for (const key of history.Items) {
         const snapshot = key as MetricsSnapshot;
         response.borrowersHistory.push({
           epoch: snapshot.createdOn,
@@ -55,9 +57,8 @@ const getHistory = async (env: ENV, fromEpoch: number, toEpoch: number) => {
         });
       }
     } else {
-      const err = `could not get history from AWS ${history}`;
-      console.error(err);
-      return internalError(err);
+      console.error(`could not get history from AWS ${history}`);
+      return badGateway('Could not get history data from AWS');
     }
     return ok(response);
   } catch (e) {
@@ -73,7 +74,9 @@ const getHistory = async (env: ENV, fromEpoch: number, toEpoch: number) => {
 // GET /history of Hubble stats
 export const handler: Handler = async (event, context) => {
   let env: ENV = 'mainnet-beta';
-  let fromEpoch: number = new Date().valueOf();
+  let from = new Date();
+  from.setMonth(from.getMonth() - 1); //by default only return historical data for the past month
+  let fromEpoch: number = from.valueOf();
   let toEpoch: number = new Date().valueOf();
   if (event?.queryStringParameters?.env) {
     env = event.queryStringParameters.env as ENV;
@@ -83,6 +86,9 @@ export const handler: Handler = async (event, context) => {
   }
   if (event?.queryStringParameters?.to) {
     toEpoch = +event.queryStringParameters.to;
+  }
+  if (fromEpoch > toEpoch) {
+    return badRequest(`Start date (epoch: ${fromEpoch}) can not be bigger than end date (epoch: ${toEpoch})`);
   }
   return await getHistory(env, fromEpoch, toEpoch);
 };

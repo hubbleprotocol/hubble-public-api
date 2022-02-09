@@ -1,6 +1,10 @@
 import { TimestampValueResponse } from './TimestampValueResponse';
 
 export type HistoryResponse = {
+  // History start date in epoch
+  startDate: number;
+  // History end date in epoch
+  endDate: number;
   // Number of borrowers through history
   borrowersHistory: TimestampValueResponse[];
   // HBB price through history
