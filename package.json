@@ -42,6 +42,8 @@
     "decimal.js": "^10.3.1",
     "hdr-histogram-js": "^3.0.0",
     "jsbi": "^4.1.0",
-    "axios": "^0.25.0"
+    "axios": "^0.25.0",
+    "@jup-ag/core": "^1.0.0-beta.11",
+    "bs58": "^4.0.1"
   }
 }

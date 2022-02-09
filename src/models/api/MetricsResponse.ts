@@ -68,7 +68,7 @@ export const getMockResponse = (): MetricsResponse => {
     revenue: 123_456.789,
     usdh: {
       issued: 800_000_000,
-      mercurial: {
+      jupiter: {
         price: 1.0001,
         liquidityPool: 5_500_000.23,
       },
