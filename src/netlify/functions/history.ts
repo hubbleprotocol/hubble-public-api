@@ -1,17 +1,18 @@
 import { Handler } from '@netlify/functions';
 import { badGateway, badRequest, internalError, ok } from '../../utils/apiUtils';
-import { TimestampValueResponse } from '../../models/api/TimestampValueResponse';
 import { ENV } from '../../services/web3/client';
 import { getSnapshotEnvVariables } from '../../services/environmentService';
-import { Credentials, DynamoDB } from 'aws-sdk';
 import { MetricsSnapshot } from '../../models/api/MetricsSnapshot';
 import { HistoryResponse } from '../../models/api/HistoryResponse';
+import { getDynamoDb } from '../../utils/awsUtils';
 
 const environmentVars = getSnapshotEnvVariables();
-const dynamoDb = new DynamoDB.DocumentClient({
-  credentials: new Credentials(environmentVars.MY_AWS_ACCESS_KEY_ID, environmentVars.MY_AWS_SECRET_ACCESS_KEY),
-  endpoint: environmentVars.DYNAMODB_ENDPOINT,
-});
+const dynamoDb = getDynamoDb(
+  environmentVars.MY_AWS_ACCESS_KEY_ID,
+  environmentVars.MY_AWS_SECRET_ACCESS_KEY,
+  environmentVars.MY_AWS_REGION,
+  environmentVars.DYNAMODB_ENDPOINT
+);
 
 const getHistory = async (env: ENV, fromEpoch: number, toEpoch: number) => {
   try {

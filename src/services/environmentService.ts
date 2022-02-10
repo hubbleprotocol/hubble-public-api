@@ -17,5 +17,6 @@ export const getSnapshotEnvVariables = () => {
   const MY_AWS_SECRET_ACCESS_KEY = DYNAMODB_ENDPOINT
     ? (getEnvOrDefault('MY_AWS_SECRET_ACCESS_KEY', 'placeholder') as string)
     : getEnvOrThrow('MY_AWS_SECRET_ACCESS_KEY');
-  return { API_URL, API_ENVIRONMENT, MY_AWS_ACCESS_KEY_ID, MY_AWS_SECRET_ACCESS_KEY, DYNAMODB_ENDPOINT };
+  const MY_AWS_REGION = getEnvOrDefault('MY_AWS_REGION', 'eu-west-1') as string;
+  return { API_URL, API_ENVIRONMENT, MY_AWS_ACCESS_KEY_ID, MY_AWS_SECRET_ACCESS_KEY, DYNAMODB_ENDPOINT, MY_AWS_REGION };
 };
