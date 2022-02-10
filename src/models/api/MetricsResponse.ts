@@ -1,4 +1,3 @@
-import { TimestampValueResponse } from './TimestampValueResponse';
 import { CollateralResponse } from './CollateralResponse';
 import { BorrowingResponse } from './BorrowingResponse';
 import { UsdhResponse } from './UsdhResponse';
@@ -32,10 +31,8 @@ export type MetricsResponse = {
 export const getMockResponse = (): MetricsResponse => {
   return {
     borrowing: {
-      borrowersHistory: getMockHistory(new Date('2021-01-01'), new Date('2021-01-02')),
       loans: {
         total: 1_000_000.123,
-        history: getMockHistory(new Date('2021-01-01'), new Date('2021-01-02')),
         max: 200_000.2,
         min: 100.5,
         average: 5000.5,
@@ -62,9 +59,7 @@ export const getMockResponse = (): MetricsResponse => {
       ratioDistribution: getMockDistribution(),
     },
     hbb: {
-      holdersHistory: getMockHistory(new Date('2021-01-01'), new Date('2021-01-02')),
       issued: 800_000_000,
-      priceHistory: getMockHistory(new Date('2021-01-01'), new Date('2021-01-02')),
       staked: 1_300_000,
       price: 1.0,
       numberOfStakers: 1500,
@@ -73,7 +68,6 @@ export const getMockResponse = (): MetricsResponse => {
     revenue: 123_456.789,
     usdh: {
       issued: 800_000_000,
-      history: getMockHistory(new Date('2021-01-01'), new Date('2021-01-02')),
       jupiter: {
         price: 1.0001,
         liquidityPool: 5_500_000.23,
@@ -88,14 +82,6 @@ export const getMockResponse = (): MetricsResponse => {
     circulatingSupplyValue: 5000,
     totalValueLocked: 6000000,
   };
-};
-
-const getMockHistory = (start: Date, end: Date): TimestampValueResponse[] => {
-  const history: TimestampValueResponse[] = [];
-  for (const dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
-    history.push({ epoch: dt.valueOf(), value: Math.random() * 1000 });
-  }
-  return history;
 };
 
 const getMockDistribution = (): PercentileResponse[] => {

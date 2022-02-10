@@ -18,9 +18,34 @@ export const unprocessable = (error: any) => {
   };
 };
 
+export const badRequest = (error: any) => {
+  return {
+    statusCode: 400,
+    body: JSON.stringify({ error: error }),
+    headers: headers,
+  };
+};
+
 export const internalError = (error: any) => {
   return {
     statusCode: 500,
+    body: JSON.stringify({ error: error }),
+    headers: headers,
+  };
+};
+
+// The server, while acting as a gateway or proxy, received an invalid response from the upstream server it accessed in attempting to fulfill the request.
+export const badGateway = (error: any) => {
+  return {
+    statusCode: 502,
+    body: JSON.stringify({ error: error }),
+    headers: headers,
+  };
+};
+
+export const customError = (error: any, statusCode: number) => {
+  return {
+    statusCode: statusCode,
     body: JSON.stringify({ error: error }),
     headers: headers,
   };

@@ -239,3 +239,6 @@ dist
 
 # Netlify
 .netlify
+
+# Local DynamoDB instance database files
+/docker/dynamodb/

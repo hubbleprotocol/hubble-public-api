@@ -1,12 +1,13 @@
 import { clusterApiUrl, Connection } from '@solana/web3.js';
 import { ENV as ChainID } from '@solana/spl-token-registry/dist/main/lib/tokenlist';
+import { getEnvOrThrow } from '../../utils/envUtils';
 
 export type ENV = 'mainnet-beta' | 'testnet' | 'devnet' | 'localnet';
 
 export const ENDPOINTS = [
   {
     name: 'mainnet-beta' as ENV,
-    endpoint: process.env.MAINNET_ENDPOINT, // we use private node for mainnet
+    endpoint: getEnvOrThrow('MAINNET_ENDPOINT'), // we use private node for mainnet
     chainID: ChainID.MainnetBeta,
   },
   {
@@ -16,7 +17,7 @@ export const ENDPOINTS = [
   },
   {
     name: 'devnet' as ENV,
-    endpoint: process.env.DEVNET_ENDPOINT, // we use private node for devnet
+    endpoint: getEnvOrThrow('DEVNET_ENDPOINT'), // we use private node for devnet
     chainID: ChainID.Devnet,
   },
   {
@@ -41,15 +42,7 @@ export class Web3Client {
       throw Error(`Invalid environment - ${env}`);
     }
 
-    if (!process.env.MAINNET_ENDPOINT) {
-      throw Error('Environment variable MAINNET_ENDPOINT is missing');
-    }
-
-    if (!process.env.DEVNET_ENDPOINT) {
-      throw Error('Environment variable DEVNET_ENDPOINT is missing');
-    }
-
-    this._endpoint = endpoint.endpoint!;
+    this._endpoint = endpoint.endpoint;
     this._env = endpoint.name;
     this._connection = new Connection(this._endpoint, 'confirmed');
     this._sendConnection = new Connection(this._endpoint, 'confirmed');
