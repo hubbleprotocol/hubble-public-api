@@ -1,7 +1,6 @@
 import { Idl, Program, Provider } from '@project-serum/anchor';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import BorrowingIdl from './borrowing.json';
-import { getConfigByEnv } from './hubbleConfig';
+import { BORROWING_IDL } from '@hubbleprotocol/hubble-idl';
 import StakingPoolState from '../../models/hubble/StakingPoolState';
 import StabilityPoolState from '../../models/hubble/StabilityPoolState';
 import { BorrowingMarketState } from '../../models/hubble/BorrowingMarketState';
@@ -9,6 +8,7 @@ import { ENV } from '../web3/client';
 import { HubbleConfig } from '../../models/hubble/HubbleConfig';
 import { UserMetadata } from '../../models/hubble/UserMetadata';
 import { StabilityProviderState } from '../../models/hubble/StabilityProviderState';
+import { getConfigByEnv } from '@hubbleprotocol/hubble-config';
 
 export class BorrowingClient {
   private readonly _client: Program;
@@ -27,7 +27,7 @@ export class BorrowingClient {
       },
       { commitment: 'confirmed' }
     );
-    this._client = new Program(BorrowingIdl as Idl, this._config.borrowing.programId, this._provider);
+    this._client = new Program(BORROWING_IDL as Idl, this._config.borrowing.programId, this._provider);
   }
 
   getStakingPoolState(): Promise<StakingPoolState> {

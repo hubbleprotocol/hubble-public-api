@@ -1,9 +1,9 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import { ENV, Web3Client } from '../web3/client';
 import { calculateSwapPrice, loadExchangeInfoFromSwapAccount } from '@saberhq/stableswap-sdk';
-import { getConfigByEnv } from '../hubble/hubbleConfig';
 import { HubbleConfig } from '../../models/hubble/HubbleConfig';
 import { PriceResponse } from '../../models/api/PriceResponse';
+import { getConfigByEnv } from '@hubbleprotocol/hubble-config';
 
 export class SaberPriceService {
   private readonly _connection: Connection;
