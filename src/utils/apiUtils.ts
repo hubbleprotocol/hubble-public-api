@@ -2,10 +2,10 @@ import { PublicKey } from '@solana/web3.js';
 
 const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
-export const ok = (body: any) => {
+export const ok = (body: any, stringifyToJson: boolean = true) => {
   return {
     statusCode: 200,
-    body: JSON.stringify(body, customReplacer),
+    body: stringifyToJson ? JSON.stringify(body, customReplacer) : body,
     headers: headers,
   };
 };
