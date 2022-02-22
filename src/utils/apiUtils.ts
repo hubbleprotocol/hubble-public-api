@@ -1,4 +1,6 @@
 import { PublicKey } from '@solana/web3.js';
+import { HandlerEvent } from '@netlify/functions';
+import { ENV, Web3Client } from '../services/web3/client';
 
 const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
@@ -58,3 +60,24 @@ function customReplacer(key: any, value: any) {
   }
   return value;
 }
+
+export const parseFromQueryParams = (
+  event: HandlerEvent
+): [web3Client: Web3Client | undefined, env: ENV | undefined, error: any] => {
+  // use mainnet-beta as a default value
+  let env: ENV = 'mainnet-beta';
+  if (event?.queryStringParameters?.env) {
+    env = event.queryStringParameters.env as ENV;
+  }
+
+  let web3Client: Web3Client;
+  try {
+    web3Client = new Web3Client(env);
+  } catch (e) {
+    const error = e as Error;
+    console.error(error);
+    return [undefined, undefined, unprocessable(error.message)];
+  }
+
+  return [web3Client, env, undefined];
+};
