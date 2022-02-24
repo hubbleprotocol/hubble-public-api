@@ -5,6 +5,7 @@ import { getSnapshotEnvVariables } from '../../services/environmentService';
 import { MetricsSnapshot } from '../../models/api/MetricsSnapshot';
 import { HistoryResponse } from '../../models/api/HistoryResponse';
 import { getDynamoDb } from '../../utils/awsUtils';
+import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 
 const environmentVars = getSnapshotEnvVariables();
 const dynamoDb = getDynamoDb(
@@ -16,14 +17,13 @@ const dynamoDb = getDynamoDb(
 
 const getHistory = async (env: ENV, fromEpoch: number, toEpoch: number) => {
   try {
-    const history = await dynamoDb
-      .query({
-        TableName: 'metrics',
-        KeyConditionExpression: '#env = :envValue and createdOn between :fromEpoch and :toEpoch',
-        ExpressionAttributeNames: { '#env': 'environment' }, //environment is a dynamodb reserved word, so we replace it with #env
-        ExpressionAttributeValues: { ':envValue': env, ':fromEpoch': fromEpoch, ':toEpoch': toEpoch },
-      })
-      .promise();
+    const params: DocumentClient.QueryInput = {
+      TableName: 'metrics',
+      KeyConditionExpression: '#env = :envValue and createdOn between :fromEpoch and :toEpoch',
+      ExpressionAttributeNames: { '#env': 'environment' }, //environment is a dynamodb reserved word, so we replace it with #env
+      ExpressionAttributeValues: { ':envValue': env, ':fromEpoch': fromEpoch, ':toEpoch': toEpoch },
+    };
+
     const response: HistoryResponse = {
       startDate: fromEpoch,
       endDate: toEpoch,
@@ -33,34 +33,40 @@ const getHistory = async (env: ENV, fromEpoch: number, toEpoch: number) => {
       loansHistory: [],
       usdhHistory: [],
     };
-    if (history?.Items) {
-      for (const key of history.Items) {
-        const snapshot = key as MetricsSnapshot;
-        response.borrowersHistory.push({
-          epoch: snapshot.createdOn,
-          value: snapshot.metrics.borrowing.numberOfBorrowers,
-        });
-        response.loansHistory.push({
-          epoch: snapshot.createdOn,
-          value: snapshot.metrics.borrowing.loans.total,
-        });
-        response.usdhHistory.push({
-          epoch: snapshot.createdOn,
-          value: snapshot.metrics.usdh.issued,
-        });
-        response.hbbPriceHistory.push({
-          epoch: snapshot.createdOn,
-          value: snapshot.metrics.hbb.price,
-        });
-        response.hbbHoldersHistory.push({
-          epoch: snapshot.createdOn,
-          value: snapshot.metrics.hbb.numberOfHolders,
-        });
+
+    do {
+      const queryResults = await dynamoDb.query(params).promise();
+      if (queryResults?.Items) {
+        for (const key of queryResults.Items) {
+          const snapshot = key as MetricsSnapshot;
+          response.borrowersHistory.push({
+            epoch: snapshot.createdOn,
+            value: snapshot.metrics.borrowing.numberOfBorrowers,
+          });
+          response.loansHistory.push({
+            epoch: snapshot.createdOn,
+            value: snapshot.metrics.borrowing.loans.total,
+          });
+          response.usdhHistory.push({
+            epoch: snapshot.createdOn,
+            value: snapshot.metrics.usdh.issued,
+          });
+          response.hbbPriceHistory.push({
+            epoch: snapshot.createdOn,
+            value: snapshot.metrics.hbb.price,
+          });
+          response.hbbHoldersHistory.push({
+            epoch: snapshot.createdOn,
+            value: snapshot.metrics.hbb.numberOfHolders,
+          });
+        }
+      } else {
+        console.error(`could not get history from AWS ${history}`);
+        return badGateway('Could not get history data from AWS');
       }
-    } else {
-      console.error(`could not get history from AWS ${history}`);
-      return badGateway('Could not get history data from AWS');
-    }
+      params.ExclusiveStartKey = queryResults.LastEvaluatedKey;
+    } while (params.ExclusiveStartKey !== undefined);
+
     return ok(response);
   } catch (e) {
     console.error(e);
