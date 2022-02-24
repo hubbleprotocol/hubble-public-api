@@ -128,7 +128,22 @@ GET https://api.hubbleprotocol.io/idl
 ### Circulating Supply Value (HBB)
 
 Get circulating supply value of HBB (number of HBB issued * HBB price).
-This is also included in the `/metrics` endpoint, but we need this for external services like CoinGecko. 
+This is also included in the `/metrics` endpoint, but we need this for external services like CoinMarketCap. 
+
+```http request
+GET https://api.hubbleprotocol.io/circulating-supply-value
+```
+
+You may also filter by environment (`mainnet-beta`[default],`devnet`,`localnet`,`testnet`) by using an `env` query parameter:
+
+```http request
+GET https://api.hubbleprotocol.io/circulating-supply-value?env=devnet
+```
+
+### Circulating Supply (HBB)
+
+Get circulating supply of HBB (number of HBB issued).
+This is also included in the `/metrics` endpoint, but we need this for external services like CoinGecko.
 
 ```http request
 GET https://api.hubbleprotocol.io/circulating-supply
