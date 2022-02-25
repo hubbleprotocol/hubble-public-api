@@ -26,8 +26,7 @@ app.listen(port, () => {
 //TODO:
 // - history caching with redis
 // - update readme
-// - create dockerfile
+// - create dockerfile (include current git hash as API_VERSION)
 // - create automated deployment workflow that builds docker image
 // - optimize /metrics endpoint
 // - start using decimal.js everywhere
-// - add version endpoint

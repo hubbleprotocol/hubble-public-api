@@ -8,7 +8,7 @@ import { Request } from 'express';
 const idlRoute = Router();
 idlRoute.get('/', (request: Request<never, any[], never, never>, response) => {
   const idls = [BORROWING_IDL]; // add other IDLs in the future...
-  return response.send(idls);
+  response.send(idls);
 });
 
 export default idlRoute;
