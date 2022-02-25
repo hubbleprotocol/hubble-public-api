@@ -22,3 +22,13 @@ const port = process.env.PORT || 8888;
 app.listen(port, () => {
   console.log(`⚡️[server]: Server is running at https://localhost:${port}`);
 });
+
+//TODO:
+// - history caching with redis
+// - update readme
+// - create dockerfile
+// - create automated deployment workflow that builds docker image
+// - create simple homepage
+// - optimize /metrics endpoint
+// - start using decimal.js everywhere
+// - add version endpoint
