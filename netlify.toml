@@ -1,8 +1,0 @@
-[functions]
-  # Sets a custom directory for Netlify Functions
-  directory = "src/netlify/functions"
-
-[[redirects]]
-from = "/*"
-to = "/.netlify/functions/:splat"
-status = 200
