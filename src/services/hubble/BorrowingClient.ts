@@ -5,10 +5,9 @@ import StakingPoolState from '../../models/hubble/StakingPoolState';
 import StabilityPoolState from '../../models/hubble/StabilityPoolState';
 import { BorrowingMarketState } from '../../models/hubble/BorrowingMarketState';
 import { ENV } from '../web3/client';
-import { HubbleConfig } from '../../models/hubble/HubbleConfig';
 import { UserMetadata } from '../../models/hubble/UserMetadata';
 import { StabilityProviderState } from '../../models/hubble/StabilityProviderState';
-import { getConfigByEnv } from '@hubbleprotocol/hubble-config';
+import { getConfigByCluster, HubbleConfig } from '@hubbleprotocol/hubble-config';
 
 export class BorrowingClient {
   private readonly _client: Program;
@@ -16,7 +15,7 @@ export class BorrowingClient {
   private readonly _config: HubbleConfig;
 
   constructor(connection: Connection, env: ENV) {
-    this._config = getConfigByEnv(env);
+    this._config = getConfigByCluster(env);
     // create a provider with a read only wallet
     this._provider = new Provider(
       connection,

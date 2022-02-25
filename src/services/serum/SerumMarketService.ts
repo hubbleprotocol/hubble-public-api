@@ -29,7 +29,7 @@ export class SerumMarketService {
           .reduce((marketAccounts, key, index) => {
             const marketAccount = accounts[index];
             if (marketAccount !== null) {
-              marketAccounts.set(key.toBase58(), marketAccountParser(key, marketAccount));
+              marketAccounts.set(key.toBase58(), marketAccountParser(key, marketAccount as AccountInfo<Buffer>));
             }
             return marketAccounts;
           }, new Map<string, MarketAccount>());
