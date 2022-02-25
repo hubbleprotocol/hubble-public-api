@@ -5,14 +5,26 @@ import circulatingSupplyValueRoute from './circulating-supply-value';
 import historyRoute from './history';
 import idlRoute from './idl';
 import metricsRoute from './metrics';
+import { Request } from 'express';
 
 const routes = Router();
 
-routes.use('/circulating-supply', circulatingSupplyRoute);
-routes.use('/circulating-supply-value', circulatingSupplyValueRoute);
-routes.use('/config', configRoute);
-routes.use('/history', historyRoute);
-routes.use('/idl', idlRoute);
-routes.use('/metrics', metricsRoute);
+const routesList: { endpoint: string; route: any }[] = [];
+routesList.push({ endpoint: '/circulating-supply', route: circulatingSupplyRoute });
+routesList.push({ endpoint: '/circulating-supply-value', route: circulatingSupplyValueRoute });
+routesList.push({ endpoint: '/config', route: configRoute });
+routesList.push({ endpoint: '/history', route: historyRoute });
+routesList.push({ endpoint: '/idl', route: idlRoute });
+routesList.push({ endpoint: '/metrics', route: metricsRoute });
+
+for (const route of routesList) {
+  routes.use(route.endpoint, route.route);
+}
+
+routes.get('/', async (request: Request<never, string, never, never>, response) => {
+  response.send(
+    `<html lang="en">${routesList.map((x) => `<li><a href="${x.endpoint}">${x.endpoint}</a></li>`).join('')}</html>`
+  );
+});
 
 export default routes;

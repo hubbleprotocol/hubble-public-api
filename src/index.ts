@@ -28,7 +28,6 @@ app.listen(port, () => {
 // - update readme
 // - create dockerfile
 // - create automated deployment workflow that builds docker image
-// - create simple homepage
 // - optimize /metrics endpoint
 // - start using decimal.js everywhere
 // - add version endpoint
