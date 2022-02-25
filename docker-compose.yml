@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  hubble-public-api:
+    build: .
+    ports:
+      - "8888:8888"
+    environment:
+      - SERVER_PORT=8888
+      - MAINNET_ENDPOINT=${MAINNET_ENDPOINT}
+      - DEVNET_ENDPOINT=${DEVNET_ENDPOINT}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - COIN_STATS_TABLE=coin-stats-dev
+      - API_VERSION=local
+  redis:
+    image: redis:6-alpine
+    ports:
+      - "6379:6379"
