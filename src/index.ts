@@ -20,7 +20,6 @@ app.listen(port, () => {
 
 //TODO:
 // - update readme
-// - create dockerfile (include current git hash as API_VERSION)
 // - create automated deployment workflow that builds docker image
-// - optimize /metrics endpoint
+//    - include current git hash as API_VERSION
 // - start using decimal.js everywhere

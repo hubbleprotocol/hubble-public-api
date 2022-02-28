@@ -18,6 +18,13 @@ import { JupiterPriceService } from '../services/price/JupiterPriceService';
 import Router from 'express-promise-router';
 import { Request } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
+import { BorrowingMarketState } from '../models/hubble/BorrowingMarketState';
+import { UserMetadata } from '../models/hubble/UserMetadata';
+import StakingPoolState from '../models/hubble/StakingPoolState';
+import StabilityPoolState from '../models/hubble/StabilityPoolState';
+import { StabilityProviderState } from '../models/hubble/StabilityProviderState';
+import { TokenAmount } from '@solana/web3.js';
+import { PriceResponse } from '../models/api/PriceResponse';
 
 /**
  * Get live Hubble on-chain metrics data
@@ -45,15 +52,38 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
     const saberService = new SaberPriceService();
     const jupiterService = new JupiterPriceService();
 
-    const borrowingMarketState = await borrowingClient.getBorrowingMarketState();
-    const markets = await serumService.getMarkets(MINT_ADDRESSES, 'confirmed');
+    // none of these requests are dependent on each other, so just bulk GET everything
+    // we use them in an array so we get type-safe array indexing later on, but order is important!
+    const responses = await Promise.all([
+      borrowingClient.getBorrowingMarketState(),
+      serumService.getMarkets(MINT_ADDRESSES, 'confirmed'),
+      orcaService.getHbbPrice(),
+      borrowingClient.getUserVaults(),
+      borrowingClient.getStakingPoolState(),
+      borrowingClient.getStabilityPoolState(),
+      borrowingClient.getStabilityProviders(),
+      borrowingClient.getTreasuryVault(),
+      borrowingClient.getHbbMintAccount(),
+      borrowingClient.getHbbProgramAccounts(),
+      saberService.getStats(),
+      jupiterService.getStats(),
+    ]);
+
+    const borrowingMarketState: BorrowingMarketState = responses[0];
+    const markets = responses[1];
+    const hbbPrice: number = responses[2].getRate().toNumber();
+    const userVaults: UserMetadata[] = responses[3];
+    const stakingPool: StakingPoolState = responses[4];
+    const stabilityPool: StabilityPoolState = responses[5];
+    const stabilityProviders: StabilityProviderState[] = responses[6];
+    const treasuryVault: TokenAmount = responses[7];
+    const hbbMint: TokenAmount = responses[8];
+    const hbbProgramAccounts = responses[9];
+    const saberStats: PriceResponse = responses[10];
+    const jupiterStats: PriceResponse = responses[11];
+
     const collateral = await getTotalCollateral(markets, borrowingMarketState);
-
-    const hbbPrice = (await orcaService.getHbbPrice()).getRate().toNumber();
-
-    const userVaults = await borrowingClient.getUserVaults();
     const borrowers = new Set<string>();
-
     for (const userVault of userVaults.filter((x) => x.borrowedStablecoin > 0)) {
       loansHistogram.recordValue(userVault.borrowedStablecoin / STABLECOIN_DECIMALS);
       borrowers.add(userVault.owner.toString());
@@ -68,11 +98,7 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
       collateralHistogram.recordValue(collRatio * 100);
     }
 
-    const stakingPool = await borrowingClient.getStakingPoolState();
     const totalHbbStaked = stakingPool.totalStake / HBB_DECIMALS;
-
-    const stabilityPool = await borrowingClient.getStabilityPoolState();
-    const stabilityProviders = await borrowingClient.getStabilityProviders();
     const totalUsdh = stabilityPool.stablecoinDeposited / STABLECOIN_DECIMALS;
 
     for (const stabilityProvider of stabilityProviders) {
@@ -81,14 +107,6 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
         stabilityHistogram.recordValue(stabilityProvided / STABLECOIN_DECIMALS);
       }
     }
-
-    const treasuryVault = await borrowingClient.getTreasuryVault();
-    const hbbMint = await borrowingClient.getHbbMintAccount();
-
-    const hbbProgramAccounts = await borrowingClient.getHbbProgramAccounts();
-
-    const saberStats = await saberService.getStats();
-    const jupiterStats = await jupiterService.getStats();
 
     return {
       collateral: {
