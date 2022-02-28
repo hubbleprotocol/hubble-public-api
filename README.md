@@ -96,6 +96,7 @@ GET https://api.hubbleprotocol.io/history?env=devnet
 History endpoint will only return the historical data of the past month by default. 
 If you need more/less data you can also use either the `from` or/and `to` query parameters to query by date.
 Both dates should be specified in their [epoch](https://en.wikipedia.org/wiki/Epoch_(computing)) form.
+**Warning:** the maximum allowed period for the history endpoint is 1 year per request.
 
 ```http request
 GET https://api.hubbleprotocol.io/history?from=1644414557599&to=1644414562241

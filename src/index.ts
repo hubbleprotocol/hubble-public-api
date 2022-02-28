@@ -15,11 +15,10 @@ app.use(routes);
 
 const port = process.env.SERVER_PORT || 8888;
 app.listen(port, () => {
-  console.log(`⚡️[server]: Server is running at https://localhost:${port}`);
+  console.log(`✅️[server] Server is running at https://localhost:${port}`);
 });
 
 //TODO:
-// - history caching with redis
 // - update readme
 // - create dockerfile (include current git hash as API_VERSION)
 // - create automated deployment workflow that builds docker image

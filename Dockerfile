@@ -14,6 +14,8 @@ FROM node AS final
 ENV NODE_ENV production
 ENV API_VERSION ${API_VERSION}
 ENV SERVER_PORT ${SERVER_PORT}
+ENV REDIS_PORT ${REDIS_PORT}
+ENV REDIS_HOST ${REDIS_HOST}
 
 RUN apk --no-cache -U upgrade
 RUN mkdir -p /home/node/app/dist && chown -R node:node /home/node/app

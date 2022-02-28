@@ -1,19 +1,26 @@
-import { badGateway, badRequest, ok } from '../utils/apiUtils';
+import { badRequest, internalError, ok } from '../utils/apiUtils';
 import { ENV } from '../services/web3/client';
-import { getAwsEnvironmentVariables } from '../services/environmentService';
+import { getAwsEnvironmentVariables, getRedisEnvironmentVariables } from '../services/environmentService';
 import { MetricsSnapshot } from '../models/api/MetricsSnapshot';
 import { HistoryResponse } from '../models/api/HistoryResponse';
 import { getDynamoDb } from '../utils/awsUtils';
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import Router from 'express-promise-router';
 import { Request } from 'express';
+import RedisService from '../services/RedisService';
 
-const environmentVars = getAwsEnvironmentVariables();
-const dynamoDb = getDynamoDb(
-  environmentVars.AWS_ACCESS_KEY_ID,
-  environmentVars.AWS_SECRET_ACCESS_KEY,
-  environmentVars.AWS_REGION
-);
+const awsEnv = getAwsEnvironmentVariables();
+const dynamoDb = getDynamoDb(awsEnv.AWS_ACCESS_KEY_ID, awsEnv.AWS_SECRET_ACCESS_KEY, awsEnv.AWS_REGION);
+
+const redisEnv = getRedisEnvironmentVariables();
+const redis = new RedisService(redisEnv.REDIS_HOST, redisEnv.REDIS_PORT);
+redis
+  .connect()
+  .then(() => console.log(`✅ [redis] Connected at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`))
+  .catch((e) => {
+    console.error(`❌ [redis] could not connect at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`, e);
+    process.exit(1);
+  });
 
 /**
  * Get Hubble on-chain historical metrics
@@ -40,14 +47,59 @@ historyRoute.get('/', async (request: Request<never, string, never, HistoryQuery
   }
 });
 
-async function getHistory(env: ENV, fromEpoch: number, toEpoch: number): Promise<{ status: number; body: any }> {
+async function saveMetricsToCache(env: ENV) {
+  console.log('saving all metrics to cache');
+  // load up 1 year of history to cache
+  const fromEpoch = new Date();
+  fromEpoch.setFullYear(fromEpoch.getFullYear() - 1);
   const params: DocumentClient.QueryInput = {
-    TableName: environmentVars.COIN_STATS_TABLE,
-    KeyConditionExpression: '#env = :envValue and createdOn between :fromEpoch and :toEpoch',
+    TableName: awsEnv.COIN_STATS_TABLE,
+    KeyConditionExpression: '#env = :envValue and createdOn >= :fromEpoch',
     ExpressionAttributeNames: { '#env': 'environment' }, //environment is a dynamodb reserved word, so we replace it with #env
-    ExpressionAttributeValues: { ':envValue': env, ':fromEpoch': fromEpoch, ':toEpoch': toEpoch },
+    ExpressionAttributeValues: { ':envValue': env, ':fromEpoch': fromEpoch.valueOf() },
   };
+  const queryResults = await getQueryResults(params);
+  await redis.setMetrics(queryResults, env);
+  return queryResults;
+}
 
+async function getQueryResults(params: DocumentClient.QueryInput) {
+  const results = [];
+  do {
+    const queryResults = await dynamoDb.query(params).promise();
+    if (queryResults?.Items) {
+      for (const key of queryResults.Items) {
+        const snapshot = key as MetricsSnapshot;
+        results.push(snapshot);
+      }
+    } else {
+      console.error(`could not get history from AWS ${history}`);
+      throw Error('Could not get history data from AWS');
+    }
+    params.ExclusiveStartKey = queryResults.LastEvaluatedKey;
+  } while (params.ExclusiveStartKey !== undefined);
+  return results;
+}
+
+async function getHistory(env: ENV, fromEpoch: number, toEpoch: number): Promise<{ status: number; body: any }> {
+  try {
+    let cachedMetrics = await redis.getMetrics(env);
+    if (!cachedMetrics) {
+      cachedMetrics = await saveMetricsToCache(env);
+    }
+
+    const filteredMetrics = cachedMetrics.filter((x) => x.createdOn >= fromEpoch && x.createdOn <= toEpoch);
+
+    // 3. every hour at 00 minutes we schedule with cron expression and call the metrics function and save it alongside existing redis cache by appending it to the history and updating endDate
+
+    return { status: ok, body: metricsToHistory(filteredMetrics, fromEpoch, toEpoch) };
+  } catch (e) {
+    console.error(e);
+    return { status: internalError, body: e instanceof Error ? e.message : e };
+  }
+}
+
+const metricsToHistory = (metrics: MetricsSnapshot[], fromEpoch: number, toEpoch: number) => {
   const response: HistoryResponse = {
     startDate: fromEpoch,
     endDate: toEpoch,
@@ -57,41 +109,29 @@ async function getHistory(env: ENV, fromEpoch: number, toEpoch: number): Promise
     loansHistory: [],
     usdhHistory: [],
   };
-
-  do {
-    const queryResults = await dynamoDb.query(params).promise();
-    if (queryResults?.Items) {
-      for (const key of queryResults.Items) {
-        const snapshot = key as MetricsSnapshot;
-        response.borrowersHistory.push({
-          epoch: snapshot.createdOn,
-          value: snapshot.metrics.borrowing.numberOfBorrowers,
-        });
-        response.loansHistory.push({
-          epoch: snapshot.createdOn,
-          value: snapshot.metrics.borrowing.loans.total,
-        });
-        response.usdhHistory.push({
-          epoch: snapshot.createdOn,
-          value: snapshot.metrics.usdh.issued,
-        });
-        response.hbbPriceHistory.push({
-          epoch: snapshot.createdOn,
-          value: snapshot.metrics.hbb.price,
-        });
-        response.hbbHoldersHistory.push({
-          epoch: snapshot.createdOn,
-          value: snapshot.metrics.hbb.numberOfHolders,
-        });
-      }
-    } else {
-      console.error(`could not get history from AWS ${history}`);
-      return { status: badGateway, body: 'Could not get history data from AWS' };
-    }
-    params.ExclusiveStartKey = queryResults.LastEvaluatedKey;
-  } while (params.ExclusiveStartKey !== undefined);
-
-  return { status: ok, body: response };
-}
+  for (const snapshot of metrics) {
+    response.borrowersHistory.push({
+      epoch: snapshot.createdOn,
+      value: snapshot.metrics.borrowing.numberOfBorrowers,
+    });
+    response.loansHistory.push({
+      epoch: snapshot.createdOn,
+      value: snapshot.metrics.borrowing.loans.total,
+    });
+    response.usdhHistory.push({
+      epoch: snapshot.createdOn,
+      value: snapshot.metrics.usdh.issued,
+    });
+    response.hbbPriceHistory.push({
+      epoch: snapshot.createdOn,
+      value: snapshot.metrics.hbb.price,
+    });
+    response.hbbHoldersHistory.push({
+      epoch: snapshot.createdOn,
+      value: snapshot.metrics.hbb.numberOfHolders,
+    });
+  }
+  return response;
+};
 
 export default historyRoute;
