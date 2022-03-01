@@ -10,5 +10,5 @@ export type HbbResponse = {
   // Total HBB issued (current supply from HBB mint account)
   issued: Decimal;
   // Number of current HBB holders
-  numberOfHolders: Decimal;
+  numberOfHolders: number;
 };

@@ -8,8 +8,9 @@ import {
   DECIMALS_SRM,
   LAMPORTS_PER_MSOL,
 } from '../constants/math';
+import Decimal from 'decimal.js';
 
-export const lamportsToCollateral = (lamports: number, token: SupportedToken): number => {
+export const lamportsToCollateral = (lamports: Decimal, token: SupportedToken): Decimal => {
   let factor = LAMPORTS_PER_SOL;
   switch (token) {
     case 'SOL': {
@@ -42,8 +43,8 @@ export const lamportsToCollateral = (lamports: number, token: SupportedToken): n
     }
   }
 
-  if (lamports === 0) {
-    return 0;
+  if (lamports.isZero()) {
+    return lamports;
   }
-  return lamports / factor;
+  return lamports.dividedBy(factor);
 };

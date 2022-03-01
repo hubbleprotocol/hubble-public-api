@@ -1,5 +1,4 @@
 import { SerumMarket } from '../models/SerumMarket';
-import { BorrowingMarketState } from '../models/hubble/BorrowingMarketState';
 import {
   BTC_MINT,
   ETH_MINT,
@@ -11,12 +10,14 @@ import {
   SUPPORTED_TOKENS,
   SupportedToken,
 } from '../constants/tokens';
-import { CollateralTotals } from '../models/hubble/CollateralTotals';
-import CollateralAmounts from '../models/hubble/CollateralAmounts';
 import { lamportsToCollateral } from './tokenUtils';
-import StabilityPoolState from '../models/hubble/StabilityPoolState';
-import { StabilityProviderState } from '../models/hubble/StabilityProviderState';
 import { SCALE_FACTOR } from '../constants/math';
+import Decimal from 'decimal.js';
+import CollateralAmounts from '@hubbleprotocol/hubble-sdk/dist/models/CollateralAmounts';
+import CollateralTotals from '@hubbleprotocol/hubble-sdk/dist/models/CollateralTotals';
+import BorrowingMarketState from '@hubbleprotocol/hubble-sdk/dist/models/BorrowingMarketState';
+import StabilityPoolState from '@hubbleprotocol/hubble-sdk/dist/models/StabilityPoolState';
+import StabilityProviderState from '@hubbleprotocol/hubble-sdk/dist/models/StabilityProviderState';
 
 export const getTokenCollateral = (
   token: SupportedToken,
@@ -50,7 +51,7 @@ export const getTokenCollateral = (
       return {
         deposited: lamportsToCollateral(deposited.sol, token),
         inactive: lamportsToCollateral(inactive.sol, token),
-        price: markets[SOL_MINT].midPrice! * 1000,
+        price: markets[SOL_MINT].midPrice!.mul(1000),
         token: token,
       };
     case 'FTT':
@@ -71,7 +72,7 @@ export const getTokenCollateral = (
       return {
         deposited: lamportsToCollateral(deposited.msol, token),
         inactive: lamportsToCollateral(inactive.msol, token),
-        price: markets[MSOL_MINT].midPrice! * 1000,
+        price: markets[MSOL_MINT].midPrice!.mul(1000),
         token: token,
       };
   }
@@ -91,47 +92,45 @@ export const getTotalCollateral = async (markets: Record<string, SerumMarket>, m
     throw Error('Could not get all prices from Serum');
   }
   let collateralTotals: CollateralTotals[] = [];
-  let total = 0;
-  let inactive = 0;
-  let deposited = 0;
+  let total = new Decimal(0);
+  let inactive = new Decimal(0);
+  let deposited = new Decimal(0);
   for (const token of SUPPORTED_TOKENS) {
     const coll = getTokenCollateral(token, market.depositedCollateral, market.inactiveCollateral, markets);
     collateralTotals.push(coll);
-    total += (coll.deposited + coll.inactive) * coll.price;
-    inactive += coll.inactive * coll.price;
-    deposited += coll.deposited * coll.price;
+    total = total.add(coll.deposited.add(coll.inactive).mul(coll.price));
+    inactive = inactive.add(coll.inactive.mul(coll.price));
+    deposited = deposited.add(coll.deposited.mul(coll.price));
   }
   return { tokens: collateralTotals, total: total, inactive: inactive, deposited: deposited };
 };
 
-export const calculateCollateralRatio = (borrowedStablecoin: number, depositedCollateral: number) => {
-  if (borrowedStablecoin === 0) {
+export const calculateCollateralRatio = (borrowedStablecoin: Decimal, depositedCollateral: Decimal) => {
+  if (borrowedStablecoin.isZero()) {
     throw Error("Can't calculate collateral ratio if borrowed stablecoin is 0");
   }
 
-  return depositedCollateral / borrowedStablecoin;
+  return depositedCollateral.dividedBy(borrowedStablecoin);
 };
 
 export const calculateStabilityProvided = (
   stabilityPoolState: StabilityPoolState,
   stabilityProviderState: StabilityProviderState
 ) => {
-  if (stabilityProviderState.depositedStablecoin === 0 || !stabilityProviderState.userDepositSnapshot.enabled) {
-    return 0;
+  if (stabilityProviderState.depositedStablecoin.isZero() || !stabilityProviderState.userDepositSnapshot.enabled) {
+    return new Decimal(0);
   }
   if (stabilityProviderState.userDepositSnapshot.epoch < stabilityPoolState.currentEpoch) {
-    return 0;
+    return new Decimal(0);
   }
-  const scaleDiff = stabilityPoolState.currentScale - stabilityProviderState.userDepositSnapshot.scale;
-  if (scaleDiff === 0) {
-    return (
-      (stabilityProviderState.depositedStablecoin * stabilityPoolState.p) /
-      stabilityProviderState.userDepositSnapshot.product
-    );
+  const scaleDiff = stabilityPoolState.currentScale.minus(stabilityProviderState.userDepositSnapshot.scale);
+  if (scaleDiff.isZero()) {
+    return stabilityProviderState.depositedStablecoin
+      .mul(stabilityPoolState.p)
+      .dividedBy(stabilityProviderState.userDepositSnapshot.product);
   }
-  return (
-    (stabilityProviderState.depositedStablecoin * stabilityPoolState.p) /
-    stabilityProviderState.userDepositSnapshot.product /
-    SCALE_FACTOR
-  );
+  return stabilityProviderState.depositedStablecoin
+    .mul(stabilityPoolState.p)
+    .dividedBy(stabilityProviderState.userDepositSnapshot.product)
+    .dividedBy(SCALE_FACTOR);
 };

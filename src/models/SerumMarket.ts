@@ -1,6 +1,7 @@
 import { PublicKey } from '@solana/web3.js';
 import { Orderbook } from '@project-serum/serum';
 import { MarketAccount } from './account';
+import Decimal from 'decimal.js';
 
 export interface SerumMarket {
   marketInfo: MarketInfo;
@@ -16,10 +17,10 @@ export interface SerumMarket {
   eventQueue?: MarketAccount;
 
   swap?: {
-    dailyVolume: number;
+    dailyVolume: Decimal;
   };
 
-  midPrice?: number;
+  midPrice?: Decimal;
 }
 
 export interface MarketInfo {

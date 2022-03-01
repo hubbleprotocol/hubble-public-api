@@ -1,4 +1,3 @@
-import { BorrowingClient } from '../services/hubble/BorrowingClient';
 import { HBB_DECIMALS, STABLECOIN_DECIMALS } from '../constants/math';
 import { MetricsResponse } from '../models/api/MetricsResponse';
 import { createSerumMarketService } from '../services/serum/SerumMarketService';
@@ -18,14 +17,9 @@ import { JupiterPriceService } from '../services/price/JupiterPriceService';
 import Router from 'express-promise-router';
 import { Request } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
-import { BorrowingMarketState } from '../models/hubble/BorrowingMarketState';
-import { UserMetadata } from '../models/hubble/UserMetadata';
-import StakingPoolState from '../models/hubble/StakingPoolState';
-import StabilityPoolState from '../models/hubble/StabilityPoolState';
-import { StabilityProviderState } from '../models/hubble/StabilityProviderState';
-import { TokenAmount } from '@solana/web3.js';
 import { PriceResponse } from '../models/api/PriceResponse';
 import Decimal from 'decimal.js';
+import { Hubble } from '@hubbleprotocol/hubble-sdk';
 
 /**
  * Get live Hubble on-chain metrics data
@@ -42,12 +36,14 @@ export default historyRoute;
 async function getMetrics(env: ENV): Promise<MetricsResponse> {
   let web3Client: Web3Client = new Web3Client(env);
 
+  //TODO: build own histogram implementation that supports Decimal instead of number..
+  // or find a lib that does this already
   const loansHistogram = hdr.build();
   const collateralHistogram = hdr.build();
   const stabilityHistogram = hdr.build();
 
   try {
-    const borrowingClient = new BorrowingClient(web3Client.connection, env);
+    const hubbleSdk = new Hubble(env, web3Client.connection);
     const serumService = createSerumMarketService();
     const orcaService = new OrcaPriceService();
     const saberService = new SaberPriceService();
@@ -56,56 +52,57 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
     // none of these requests are dependent on each other, so just bulk GET everything
     // we use them in an array so we get type-safe array indexing later on, but order is important!
     const responses = await Promise.all([
-      borrowingClient.getBorrowingMarketState(),
+      hubbleSdk.getBorrowingMarketState(),
       serumService.getMarkets(MINT_ADDRESSES, 'confirmed'),
       orcaService.getHbbPrice(),
-      borrowingClient.getUserVaults(),
-      borrowingClient.getStakingPoolState(),
-      borrowingClient.getStabilityPoolState(),
-      borrowingClient.getStabilityProviders(),
-      borrowingClient.getTreasuryVault(),
-      borrowingClient.getHbbMintAccount(),
-      borrowingClient.getHbbProgramAccounts(),
+      hubbleSdk.getAllUserMetadatas(),
+      hubbleSdk.getStakingPoolState(),
+      hubbleSdk.getStabilityPoolState(),
+      hubbleSdk.getStabilityProviders(),
+      hubbleSdk.getTreasuryVault(),
+      hubbleSdk.getHbbCirculatingSupply(),
+      hubbleSdk.getHbbTokenAccounts(),
       saberService.getStats(),
       jupiterService.getStats(),
     ]);
 
-    const borrowingMarketState: BorrowingMarketState = responses[0];
+    const borrowingMarketState = responses[0];
     const markets = responses[1];
     const hbbPrice: Decimal = responses[2].getRate();
-    const userVaults: UserMetadata[] = responses[3];
-    const stakingPool: StakingPoolState = responses[4];
-    const stabilityPool: StabilityPoolState = responses[5];
-    const stabilityProviders: StabilityProviderState[] = responses[6];
-    const treasuryVault: TokenAmount = responses[7];
-    const hbbMint: TokenAmount = responses[8];
+    const userVaults = responses[3];
+    const stakingPool = responses[4];
+    const stabilityPool = responses[5];
+    const stabilityProviders = responses[6];
+    const treasuryVault: Decimal = responses[7];
+    const circulatingSupply: Decimal = responses[8];
     const hbbProgramAccounts = responses[9];
     const saberStats: PriceResponse = responses[10];
     const jupiterStats: PriceResponse = responses[11];
 
     const collateral = await getTotalCollateral(markets, borrowingMarketState);
     const borrowers = new Set<string>();
-    for (const userVault of userVaults.filter((x) => x.borrowedStablecoin > 0)) {
-      loansHistogram.recordValue(userVault.borrowedStablecoin / STABLECOIN_DECIMALS);
+    for (const userVault of userVaults.filter((x) => x.borrowedStablecoin.greaterThan(0))) {
+      const borrowedStablecoin = userVault.borrowedStablecoin.dividedBy(STABLECOIN_DECIMALS);
+      loansHistogram.recordValue(borrowedStablecoin.toNumber());
       borrowers.add(userVault.owner.toString());
 
-      let collateralTotal = 0;
+      let collateralTotal = new Decimal(0);
       for (const token of SUPPORTED_TOKENS) {
         const coll = getTokenCollateral(token, userVault.depositedCollateral, userVault.inactiveCollateral, markets);
-        collateralTotal += coll.deposited * coll.price;
+        collateralTotal = collateralTotal.add(coll.deposited.mul(coll.price));
       }
-      const collRatio = calculateCollateralRatio(userVault.borrowedStablecoin / STABLECOIN_DECIMALS, collateralTotal);
+      const collRatio = calculateCollateralRatio(borrowedStablecoin, collateralTotal);
       //we record the value in %, histograms don't work well with decimals so this way it's easier
-      collateralHistogram.recordValue(collRatio * 100);
+      collateralHistogram.recordValue(collRatio.mul(100).toNumber());
     }
 
-    const totalHbbStaked = stakingPool.totalStake / HBB_DECIMALS;
-    const totalUsdh = stabilityPool.stablecoinDeposited / STABLECOIN_DECIMALS;
+    const totalHbbStaked = stakingPool.totalStake.dividedBy(HBB_DECIMALS);
+    const totalUsdh = stabilityPool.stablecoinDeposited.dividedBy(STABLECOIN_DECIMALS);
 
     for (const stabilityProvider of stabilityProviders) {
       const stabilityProvided = calculateStabilityProvided(stabilityPool, stabilityProvider);
-      if (stabilityProvided > 0) {
-        stabilityHistogram.recordValue(stabilityProvided / STABLECOIN_DECIMALS);
+      if (stabilityProvided.greaterThan(0)) {
+        stabilityHistogram.recordValue(stabilityProvided.dividedBy(STABLECOIN_DECIMALS).toNumber());
       }
     }
 
@@ -120,40 +117,40 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
           price: x.price,
         })),
         ratioDistribution: getPercentiles(collateralHistogram)
-          .filter((x) => x.value > 0)
+          .filter((x) => x.value.greaterThan(0))
           .map((x) => {
-            x.value /= 100;
+            x.value = x.value.dividedBy(100);
             return x;
           }),
         collateralRatio: calculateCollateralRatio(
-          borrowingMarketState.stablecoinBorrowed / STABLECOIN_DECIMALS,
+          borrowingMarketState.stablecoinBorrowed.dividedBy(STABLECOIN_DECIMALS),
           collateral.deposited
         ),
       },
       hbb: {
         staked: totalHbbStaked,
-        numberOfStakers: stakingPool.numUsers.toNumber(),
+        numberOfStakers: stakingPool.numUsers,
         price: hbbPrice,
-        issued: hbbMint.uiAmount as number,
+        issued: circulatingSupply,
         numberOfHolders: hbbProgramAccounts.length,
       },
-      revenue: stakingPool.totalDistributedRewards / 0.85 / HBB_DECIMALS,
+      revenue: stakingPool.totalDistributedRewards.dividedBy(0.85).dividedBy(HBB_DECIMALS),
       borrowing: {
         numberOfBorrowers: borrowers.size,
-        treasury: treasuryVault.uiAmount as number,
+        treasury: treasuryVault,
         loans: {
           distribution: getPercentiles(loansHistogram),
           total: loansHistogram.totalCount,
-          max: loansHistogram.maxValue,
-          min: loansHistogram.totalCount > 0 ? loansHistogram.minNonZeroValue : 0,
-          average: loansHistogram.mean,
-          median: loansHistogram.getValueAtPercentile(50),
+          max: new Decimal(loansHistogram.maxValue),
+          min: new Decimal(loansHistogram.totalCount > 0 ? loansHistogram.minNonZeroValue : 0),
+          average: new Decimal(loansHistogram.mean),
+          median: new Decimal(loansHistogram.getValueAtPercentile(50)),
         },
       },
       usdh: {
         stabilityPool: totalUsdh,
         stabilityPoolDistribution: getPercentiles(stabilityHistogram),
-        issued: borrowingMarketState.stablecoinBorrowed / STABLECOIN_DECIMALS,
+        issued: borrowingMarketState.stablecoinBorrowed.dividedBy(STABLECOIN_DECIMALS),
         jupiter: {
           price: jupiterStats.price,
           liquidityPool: jupiterStats.liquidityPool,
@@ -163,8 +160,8 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
           liquidityPool: saberStats.liquidityPool,
         },
       },
-      circulatingSupplyValue: (hbbMint.uiAmount as number) * hbbPrice,
-      totalValueLocked: totalHbbStaked * hbbPrice + collateral.total + totalUsdh,
+      circulatingSupplyValue: circulatingSupply.mul(hbbPrice),
+      totalValueLocked: totalHbbStaked.mul(hbbPrice).plus(collateral.total).plus(totalUsdh),
     };
   } finally {
     loansHistogram.destroy();

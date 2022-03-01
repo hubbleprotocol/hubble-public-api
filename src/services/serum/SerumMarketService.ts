@@ -6,6 +6,7 @@ import { STABLE_COINS } from '../../constants/tokens';
 import { MarketInfo, SerumMarket } from '../../models/SerumMarket';
 import { marketAccountParser } from './marketAccountParser';
 import { MINT_TO_MARKET } from '../../models/marketOverrides';
+import Decimal from 'decimal.js';
 
 export class SerumMarketService {
   private client: Web3Client;
@@ -160,29 +161,29 @@ export class SerumMarketService {
     ];
   };
 
-  private getMidPrice = (mint: string, bids?: Orderbook, asks?: Orderbook): number => {
+  private getMidPrice = (mint: string, bids?: Orderbook, asks?: Orderbook): Decimal => {
     const SERUM_TOKEN = TOKEN_MINTS.find((a) => a.address.toBase58() === mint);
 
     if (STABLE_COINS.has(SERUM_TOKEN?.name || '')) {
-      return 1.0;
+      return new Decimal(1);
     }
 
     if (bids && asks) {
       return this.bbo(bids, asks);
     }
 
-    return 0;
+    return new Decimal(0);
   };
 
-  private bbo = (bidsBook: Orderbook, asksBook: Orderbook): number => {
+  private bbo = (bidsBook: Orderbook, asksBook: Orderbook): Decimal => {
     const bestBid = bidsBook.getL2(1);
     const bestAsk = asksBook.getL2(1);
 
     if (bestBid.length > 0 && bestAsk.length > 0) {
-      return (bestBid[0][0] + bestAsk[0][0]) / 2.0;
+      return new Decimal(bestBid[0][0]).plus(bestAsk[0][0]).dividedBy(2);
     }
 
-    return 0;
+    return new Decimal(0);
   };
 }
 

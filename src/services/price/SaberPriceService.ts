@@ -3,6 +3,7 @@ import { ENV, Web3Client } from '../web3/client';
 import { calculateSwapPrice, loadExchangeInfoFromSwapAccount } from '@saberhq/stableswap-sdk';
 import { PriceResponse } from '../../models/api/PriceResponse';
 import { getConfigByCluster, HubbleConfig } from '@hubbleprotocol/hubble-config';
+import Decimal from 'decimal.js';
 
 export class SaberPriceService {
   private readonly _connection: Connection;
@@ -24,6 +25,6 @@ export class SaberPriceService {
       );
     }
     const swap = calculateSwapPrice(ex);
-    return { price: swap.asNumber, liquidityPool: ex.lpTotalSupply.asNumber };
+    return { price: new Decimal(swap.asNumber), liquidityPool: new Decimal(ex.lpTotalSupply.asNumber) };
   }
 }

@@ -8,6 +8,7 @@ import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import Router from 'express-promise-router';
 import { Request } from 'express';
 import RedisService from '../services/RedisService';
+import Decimal from 'decimal.js';
 
 const awsEnv = getAwsEnvironmentVariables();
 const dynamoDb = getDynamoDb(awsEnv.AWS_ACCESS_KEY_ID, awsEnv.AWS_SECRET_ACCESS_KEY, awsEnv.AWS_REGION);
@@ -112,11 +113,11 @@ const metricsToHistory = (metrics: MetricsSnapshot[], fromEpoch: number, toEpoch
   for (const snapshot of metrics) {
     response.borrowersHistory.push({
       epoch: snapshot.createdOn,
-      value: snapshot.metrics.borrowing.numberOfBorrowers,
+      value: new Decimal(snapshot.metrics.borrowing.numberOfBorrowers),
     });
     response.loansHistory.push({
       epoch: snapshot.createdOn,
-      value: snapshot.metrics.borrowing.loans.total,
+      value: new Decimal(snapshot.metrics.borrowing.loans.total),
     });
     response.usdhHistory.push({
       epoch: snapshot.createdOn,
@@ -128,7 +129,7 @@ const metricsToHistory = (metrics: MetricsSnapshot[], fromEpoch: number, toEpoch
     });
     response.hbbHoldersHistory.push({
       epoch: snapshot.createdOn,
-      value: snapshot.metrics.hbb.numberOfHolders,
+      value: new Decimal(snapshot.metrics.hbb.numberOfHolders),
     });
   }
   return response;

@@ -1,5 +1,6 @@
 import { Histogram } from 'hdr-histogram-js';
 import { PercentileResponse } from '../models/api/PercentileResponse';
+import Decimal from 'decimal.js';
 
 export const getPercentiles = (histogram: Histogram) => {
   const percentiles: PercentileResponse[] = [];
@@ -10,7 +11,7 @@ export const getPercentiles = (histogram: Histogram) => {
   while (iterator.hasNext()) {
     const iterationValue = iterator.next();
     percentiles.push({
-      value: iterationValue.valueIteratedTo,
+      value: new Decimal(iterationValue.valueIteratedTo),
       percentile: iterationValue.percentileLevelIteratedTo / 100,
       totalCount: iterationValue.totalCountToThisValue,
     });

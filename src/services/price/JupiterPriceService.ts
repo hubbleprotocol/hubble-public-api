@@ -4,6 +4,7 @@ import { PriceResponse } from '../../models/api/PriceResponse';
 import { Jupiter } from '@jup-ag/core';
 import { DECIMALS_USDC, STABLECOIN_DECIMALS } from '../../constants/math';
 import { getConfigByCluster, HubbleConfig } from '@hubbleprotocol/hubble-config';
+import Decimal from 'decimal.js';
 
 export class JupiterPriceService {
   private readonly _connection: Connection;
@@ -27,8 +28,8 @@ export class JupiterPriceService {
       slippage: 0,
     });
     return {
-      price: routes.routesInfos[0].outAmount / STABLECOIN_DECIMALS,
-      liquidityPool: 0, // jupiter does not track LP supply
+      price: new Decimal(routes.routesInfos[0].outAmount).dividedBy(STABLECOIN_DECIMALS),
+      liquidityPool: new Decimal(0), // jupiter does not track LP supply
     };
   }
 }

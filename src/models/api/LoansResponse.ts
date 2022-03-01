@@ -3,7 +3,7 @@ import Decimal from 'decimal.js';
 
 export type LoansResponse = {
   // Number of current loans
-  total: Decimal;
+  total: number;
   // Loan amount distribution
   distribution: PercentileResponse[];
   // Largest loan in the borrowing market
