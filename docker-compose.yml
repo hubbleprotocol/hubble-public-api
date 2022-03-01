@@ -1,11 +1,14 @@
 version: "3.8"
+
+# docker-compose to easily test API+redis locally
+
 services:
   hubble-public-api:
     build: .
     ports:
-      - "8888:8888"
+      - "8080:8080"
     environment:
-      - SERVER_PORT=8888
+      - SERVER_PORT=8080
       - MAINNET_ENDPOINT=${MAINNET_ENDPOINT}
       - DEVNET_ENDPOINT=${DEVNET_ENDPOINT}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
