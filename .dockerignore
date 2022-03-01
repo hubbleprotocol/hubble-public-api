@@ -5,3 +5,8 @@ dist
 .env
 .env.example
 .prettierrc
+.netlify
+helm
+docker-compose.yml
+Dockerfile
+README.md
