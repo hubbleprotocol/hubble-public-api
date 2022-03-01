@@ -22,5 +22,3 @@ app.listen(port, () => {
 // - update readme
 // - create automated deployment workflow that builds docker image
 // - include current git hash as API_VERSION
-// - start using decimal.js everywhere
-// - add everything from borrowing client to hubble-common-sdk
