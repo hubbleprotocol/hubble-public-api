@@ -1,10 +1,11 @@
 import { SupportedToken } from '../../constants/tokens';
+import Decimal from 'decimal.js';
 
 export type TokenResponse = {
   // Short token name
   name: SupportedToken;
   // Amount of token
-  amount: number;
+  amount: Decimal;
   // Price of token
-  price: number;
+  price: Decimal;
 };

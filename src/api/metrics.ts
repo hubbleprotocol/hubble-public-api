@@ -25,6 +25,7 @@ import StabilityPoolState from '../models/hubble/StabilityPoolState';
 import { StabilityProviderState } from '../models/hubble/StabilityProviderState';
 import { TokenAmount } from '@solana/web3.js';
 import { PriceResponse } from '../models/api/PriceResponse';
+import Decimal from 'decimal.js';
 
 /**
  * Get live Hubble on-chain metrics data
@@ -71,7 +72,7 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
 
     const borrowingMarketState: BorrowingMarketState = responses[0];
     const markets = responses[1];
-    const hbbPrice: number = responses[2].getRate().toNumber();
+    const hbbPrice: Decimal = responses[2].getRate();
     const userVaults: UserMetadata[] = responses[3];
     const stakingPool: StakingPoolState = responses[4];
     const stabilityPool: StabilityPoolState = responses[5];

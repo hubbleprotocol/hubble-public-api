@@ -1,6 +1,8 @@
+import Decimal from 'decimal.js';
+
 export type PriceResponse = {
   // current price
-  price: number;
+  price: Decimal;
   // current supply in liquidity pool
-  liquidityPool: number;
+  liquidityPool: Decimal;
 };

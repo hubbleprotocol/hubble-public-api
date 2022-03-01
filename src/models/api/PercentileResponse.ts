@@ -1,5 +1,7 @@
+import Decimal from 'decimal.js';
+
 export type PercentileResponse = {
-  value: number;
+  value: Decimal;
   totalCount: number;
   percentile: number;
 };

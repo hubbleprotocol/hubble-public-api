@@ -1,16 +1,17 @@
 import { PercentileResponse } from './PercentileResponse';
+import Decimal from 'decimal.js';
 
 export type LoansResponse = {
   // Number of current loans
-  total: number;
+  total: Decimal;
   // Loan amount distribution
   distribution: PercentileResponse[];
   // Largest loan in the borrowing market
-  max: number;
+  max: Decimal;
   // Smallest loan in the borrowing market
-  min: number;
+  min: Decimal;
   // Average loan value in the borrowing market
-  average: number;
+  average: Decimal;
   // Median loan value in the borrowing market
-  median: number;
+  median: Decimal;
 };

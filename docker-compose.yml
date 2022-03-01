@@ -11,7 +11,7 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - COIN_STATS_TABLE=coin-stats-dev
-      - API_VERSION=local
+      - API_VERSION=local-docker
       - REDIS_PORT=6379
       - REDIS_HOST=redis
     depends_on:

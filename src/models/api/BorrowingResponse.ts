@@ -1,10 +1,11 @@
 import { LoansResponse } from './LoansResponse';
+import Decimal from 'decimal.js';
 
 export type BorrowingResponse = {
   // Number of currently active borrowers
-  numberOfBorrowers: number;
+  numberOfBorrowers: Decimal;
   // Loans
   loans: LoansResponse;
   // Treasury amount
-  treasury: number;
+  treasury: Decimal;
 };
