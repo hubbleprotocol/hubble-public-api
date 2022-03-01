@@ -21,4 +21,4 @@ app.listen(port, () => {
 //TODO:
 // - update readme
 // - create automated deployment workflow that builds docker image
-// - include current git hash as API_VERSION
+//     - include current git hash as API_VERSION

@@ -13,11 +13,13 @@ import {
 import { lamportsToCollateral } from './tokenUtils';
 import { SCALE_FACTOR } from '../constants/math';
 import Decimal from 'decimal.js';
-import CollateralAmounts from '@hubbleprotocol/hubble-sdk/dist/models/CollateralAmounts';
-import CollateralTotals from '@hubbleprotocol/hubble-sdk/dist/models/CollateralTotals';
-import BorrowingMarketState from '@hubbleprotocol/hubble-sdk/dist/models/BorrowingMarketState';
-import StabilityPoolState from '@hubbleprotocol/hubble-sdk/dist/models/StabilityPoolState';
-import StabilityProviderState from '@hubbleprotocol/hubble-sdk/dist/models/StabilityProviderState';
+import {
+  BorrowingMarketState,
+  CollateralAmounts,
+  CollateralTotals,
+  StabilityPoolState,
+  StabilityProviderState,
+} from '@hubbleprotocol/hubble-sdk';
 
 export const getTokenCollateral = (
   token: SupportedToken,

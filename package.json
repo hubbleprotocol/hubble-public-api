@@ -53,7 +53,7 @@
     "bs58": "^5.0.0",
     "@hubbleprotocol/hubble-idl": "^1.0.18",
     "@hubbleprotocol/hubble-config": "^1.0.18",
-    "@hubbleprotocol/hubble-sdk": "^1.0.22",
+    "@hubbleprotocol/hubble-sdk": "^1.0.23",
     "express-promise-router": "^4.1.1",
     "redis": "^4.0.4"
   }

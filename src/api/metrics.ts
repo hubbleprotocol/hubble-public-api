@@ -19,7 +19,14 @@ import { Request } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { PriceResponse } from '../models/api/PriceResponse';
 import Decimal from 'decimal.js';
-import { Hubble } from '@hubbleprotocol/hubble-sdk';
+import {
+  BorrowingMarketState,
+  Hubble,
+  StabilityPoolState,
+  StabilityProviderState,
+  StakingPoolState,
+  UserMetadata,
+} from '@hubbleprotocol/hubble-sdk';
 
 /**
  * Get live Hubble on-chain metrics data
@@ -66,13 +73,13 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
       jupiterService.getStats(),
     ]);
 
-    const borrowingMarketState = responses[0];
+    const borrowingMarketState: BorrowingMarketState = responses[0];
     const markets = responses[1];
     const hbbPrice: Decimal = responses[2].getRate();
-    const userVaults = responses[3];
-    const stakingPool = responses[4];
-    const stabilityPool = responses[5];
-    const stabilityProviders = responses[6];
+    const userVaults: UserMetadata[] = responses[3];
+    const stakingPool: StakingPoolState = responses[4];
+    const stabilityPool: StabilityPoolState = responses[5];
+    const stabilityProviders: StabilityProviderState[] = responses[6];
     const treasuryVault: Decimal = responses[7];
     const circulatingSupply: Decimal = responses[8];
     const hbbProgramAccounts = responses[9];
