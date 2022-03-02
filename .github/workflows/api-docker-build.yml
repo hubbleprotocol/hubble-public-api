@@ -3,7 +3,8 @@ name: Hubble Public API Docker Build
 on:
   push:
     branches:
-      - master
+      - express # todo: remove after merged to master..
+#      - master
 
 jobs:
   build_docker:
