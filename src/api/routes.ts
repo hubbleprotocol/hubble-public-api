@@ -7,6 +7,7 @@ import idlRoute from './idl';
 import metricsRoute from './metrics';
 import { Request } from 'express';
 import versionRoute from './version';
+import healthRoute from './health';
 
 const routes = Router();
 
@@ -18,6 +19,7 @@ routesList.push({ endpoint: '/history', route: historyRoute });
 routesList.push({ endpoint: '/idl', route: idlRoute });
 routesList.push({ endpoint: '/metrics', route: metricsRoute });
 routesList.push({ endpoint: '/version', route: versionRoute });
+routesList.push({ endpoint: '/health', route: healthRoute });
 
 for (const route of routesList) {
   routes.use(route.endpoint, route.route);

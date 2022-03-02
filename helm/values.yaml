@@ -1,0 +1,69 @@
+service-base-chart:
+  applicationName: hubble-public-api
+  image:
+    repository: hubbleprotocol/hubble-public-api
+    tag: "latest"
+
+  containerPorts: 80
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/group.name: dev.hubbleprotocol.io
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+      alb.ingress.kubernetes.io/ssl-redirect: '443'
+      alb.ingress.kubernetes.io/healthcheck-path: /health
+    hosts:
+      - api.dev.hubbleprotocol.io
+
+  startupProbe:
+    path: /version
+  livenessProbe:
+    path: /version
+  readinessProbe:
+    path: /health
+
+  envVars:
+    - name: SERVER_PORT
+      value: "80"
+    - name: MAINNET_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: hubble-public-api-secret
+          key: MAINNET_ENDPOINT
+    - name: DEVNET_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: hubble-public-api-secret
+          key: DEVNET_ENDPOINT
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: hubble-public-api-secret
+          key: AWS_ACCESS_KEY_ID
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: hubble-public-api-secret
+          key: AWS_SECRET_ACCESS_KEY
+    - name: COIN_STATS_TABLE
+      value: "coin-stats-dev"
+    - name: REDIS_PORT
+      value: "6379"
+    - name: REDIS_HOST
+      value: "redis-hubble-public-api-master"
+
+  secrets:
+    MAINNET_ENDPOINT:
+    DEVNET_ENDPOINT:
+    AWS_ACCESS_KEY_ID:
+    AWS_SECRET_ACCESS_KEY:
+
+redis:
+  architecture: standalone
+  fullnameOverride: redis-hubble-public-api
+  auth:
+    enabled: false
+

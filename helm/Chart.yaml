@@ -1,0 +1,12 @@
+apiVersion: v2
+name: hubble-public-api
+description: A Helm chart for Hubble Public API
+type: application
+version: 0.1.0
+dependencies:
+  - name: service-base-chart
+    version: 0.0.1-SNAPSHOT-1644324659
+    repository: "@hubbleprotocol"
+  - name: redis
+    version: 16.4.5
+    repository: "@bitnami"

@@ -13,6 +13,10 @@ export default class RedisService {
     return this._client.connect();
   }
 
+  disconnect() {
+    return this._client.disconnect();
+  }
+
   async getMetrics(env: ENV) {
     const history = await this._client.get(`history-${env}`);
     if (history) {

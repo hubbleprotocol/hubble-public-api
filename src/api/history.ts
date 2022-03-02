@@ -20,7 +20,6 @@ redis
   .then(() => console.log(`✅ [redis] Connected at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`))
   .catch((e) => {
     console.error(`❌ [redis] could not connect at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`, e);
-    process.exit(1);
   });
 
 /**
