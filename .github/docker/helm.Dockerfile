@@ -15,6 +15,7 @@ RUN --mount=type=secret,id=aws_access_key_id \
 	&& export AWS_SECRET_ACCESS_KEY=$(cat /run/secrets/aws_secret_access_key) \
 	&& export AWS_REGION=eu-west-1 \
 	&& helm repo add hubbleprotocol s3://helmrepository.build.hubbleprotocol.io \
+    && helm repo add bitnami https://charts.bitnami.com/bitnami \
 	&& helm dependency update \
 	&& helm package ./ \
 	&& helm s3 push ./"$CHART"-"$BUILD_VERSION".tgz hubbleprotocol
