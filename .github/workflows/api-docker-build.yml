@@ -43,7 +43,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=min
           build-args: |
-            "API_VERSION=${{ needs.build_docker.outputs.build_version }}"
+            "API_VERSION=${{ steps.set_versions.outputs.build_version }}"
   build_helm:
     needs: build_docker
     runs-on: ubuntu-latest
