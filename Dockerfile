@@ -13,7 +13,7 @@ RUN npm run build
 
 FROM node AS final
 ENV NODE_ENV production
-ENV API_VERSION ${API_VERSION}
+ENV API_VERSION $API_VERSION
 
 RUN apk --no-cache -U upgrade
 RUN mkdir -p /home/node/app/dist && chown -R node:node /home/node/app
