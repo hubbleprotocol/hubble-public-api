@@ -3,7 +3,7 @@ FROM hubbleprotocol/helm:0.0.1
 ARG CHART
 ARG BUILD_VERSION
 
-COPY /bots/$CHART/helm /build/helm
+COPY /helm /build/helm
 COPY /.github/scripts /build/scripts
 WORKDIR /build/helm
 
