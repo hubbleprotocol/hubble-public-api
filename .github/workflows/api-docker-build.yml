@@ -89,7 +89,7 @@ jobs:
           file: ./Dockerfile
           tags: hubbleprotocol/hubble-public-api-release-bin:${{ needs.build_docker.outputs.build_version }}
           push: false
-          target: release-bin
+#          target: release-bin
           outputs: "type=tar,dest=hubble-public-api-${{ needs.build_docker.outputs.build_version }}.tar"
           cache-from: type=gha
       - name: Create pre-release
