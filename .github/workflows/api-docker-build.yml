@@ -41,7 +41,7 @@ jobs:
           file: ./Dockerfile
           tags: hubbleprotocol/hubble-public-api:${{ steps.set_versions.outputs.build_version }}
           push: true
-          target: release
+#          target: release
           cache-from: type=gha
           cache-to: type=gha,mode=min
           build-args: |
