@@ -1,3 +1,5 @@
+ARG API_VERSION
+
 FROM node:16-alpine AS node
 FROM node AS builder
 WORKDIR /app
