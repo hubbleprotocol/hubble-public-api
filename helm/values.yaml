@@ -4,7 +4,8 @@ service-base-chart:
     repository: hubbleprotocol/hubble-public-api
     tag: "latest"
 
-  containerPorts: 80
+  containerPorts:
+    - "80"
   ingress:
     enabled: true
     annotations:
