@@ -5,7 +5,9 @@ service-base-chart:
     tag: "latest"
 
   containerPorts:
-    - "80"
+    - name: http
+      containerPort: 80
+      protocol: TCP
   ingress:
     enabled: true
     annotations:
