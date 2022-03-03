@@ -30,7 +30,6 @@ jobs:
       - name: Set versions
         id: set_versions
         shell: bash
-#        working-directory: ./bots/liquidations-bot
         run: ./.github/scripts/set-node-versions.sh
       - name: Docker buildx (build)
         id: docker_build
@@ -41,7 +40,6 @@ jobs:
           file: ./Dockerfile
           tags: hubbleprotocol/hubble-public-api:${{ steps.set_versions.outputs.build_version }}
           push: true
-#          target: release
           cache-from: type=gha
           cache-to: type=gha,mode=min
           build-args: |
@@ -89,7 +87,6 @@ jobs:
           file: ./Dockerfile
           tags: hubbleprotocol/hubble-public-api-release-bin:${{ needs.build_docker.outputs.build_version }}
           push: false
-#          target: release-bin
           outputs: "type=tar,dest=hubble-public-api-${{ needs.build_docker.outputs.build_version }}.tar"
           cache-from: type=gha
       - name: Create pre-release
