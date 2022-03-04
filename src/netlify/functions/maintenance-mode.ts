@@ -1,7 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { badGateway, internalError, ok } from '../../utils/apiUtils';
 import { ENV } from '../../services/web3/client';
-import { getAllConfigs, getConfigByEnv } from '@hubbleprotocol/hubble-config';
 import { getParameter } from '../../utils/awsUtils';
 import { getMaintenanceModeParameterName } from '../../constants/hubble';
 import { getSnapshotEnvVariables } from '../../services/environmentService';
