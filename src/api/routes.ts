@@ -8,6 +8,8 @@ import metricsRoute from './metrics';
 import { Request } from 'express';
 import versionRoute from './version';
 import healthRoute from './health';
+import maintenanceModeRoute from './maintenance-mode';
+import borrowingVersionRoute from './borrowing-version';
 
 const routes = Router();
 
@@ -20,6 +22,8 @@ routesList.push({ endpoint: '/idl', route: idlRoute });
 routesList.push({ endpoint: '/metrics', route: metricsRoute });
 routesList.push({ endpoint: '/version', route: versionRoute });
 routesList.push({ endpoint: '/health', route: healthRoute });
+routesList.push({ endpoint: '/maintenance-mode', route: maintenanceModeRoute });
+routesList.push({ endpoint: '/borrowing-version', route: borrowingVersionRoute });
 
 for (const route of routesList) {
   routes.use(route.endpoint, route.route);
