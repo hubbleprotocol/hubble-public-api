@@ -21,8 +21,7 @@ healthRoute.get('/', (request: Request<never, string, never, never>, response) =
       const err = `could not connect to redis at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`;
       console.error(err, e);
       response.status(badGateway).send(err);
-    })
-    .finally(async () => await redis.disconnect());
+    });
 });
 
 export default healthRoute;
