@@ -4,19 +4,19 @@ import { createSerumMarketService } from '../services/serum/SerumMarketService';
 import { ENV, Web3Client } from '../services/web3/client';
 import * as hdr from 'hdr-histogram-js';
 import { MINT_ADDRESSES, SUPPORTED_TOKENS } from '../constants/tokens';
-import { getPercentiles } from '../utils/histogramUtils';
+import { d3BinsToResponse, getPercentiles } from '../utils/histogramUtils';
 import { OrcaPriceService } from '../services/price/OrcaPriceService';
 import {
   calculateCollateralRatio,
   calculateStabilityProvided,
   getTokenCollateral,
   getTotalCollateral,
+  maxMinAvg,
 } from '../utils/calculations';
 import { SaberPriceService } from '../services/price/SaberPriceService';
 import { JupiterPriceService } from '../services/price/JupiterPriceService';
 import Router from 'express-promise-router';
 import { Request } from 'express';
-import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { PriceResponse } from '../models/api/PriceResponse';
 import Decimal from 'decimal.js';
 import {
@@ -27,20 +27,29 @@ import {
   StakingPoolState,
   UserMetadata,
 } from '@hubbleprotocol/hubble-sdk';
+import { bin } from 'd3-array';
+
+type MetricsQueryParams = {
+  // Solana cluster name
+  env: ENV | undefined;
+  // Number of bins for distributions
+  bins: number | undefined;
+};
 
 /**
  * Get live Hubble on-chain metrics data
  */
 const historyRoute = Router();
-historyRoute.get('/', async (request: Request<never, MetricsResponse, never, EnvironmentQueryParams>, response) => {
+historyRoute.get('/', async (request: Request<never, MetricsResponse, never, MetricsQueryParams>, response) => {
   let env: ENV = request.query.env ?? 'mainnet-beta';
-  const metrics = await getMetrics(env);
+  let bins = request.query.bins ?? 20;
+  const metrics = await getMetrics(env, bins);
   response.send(metrics);
 });
 
 export default historyRoute;
 
-async function getMetrics(env: ENV): Promise<MetricsResponse> {
+async function getMetrics(env: ENV, numberOfBins: number): Promise<MetricsResponse> {
   let web3Client: Web3Client = new Web3Client(env);
 
   //TODO: build own histogram implementation that supports Decimal instead of number..
@@ -48,6 +57,10 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
   const loansHistogram = hdr.build();
   const collateralHistogram = hdr.build();
   const stabilityHistogram = hdr.build();
+  const loanBins: number[] = [];
+  const collateralBins: number[] = [];
+  const loanToValueBins: number[] = [];
+  const stabilityBins: number[] = [];
 
   try {
     const hubbleSdk = new Hubble(env, web3Client.connection);
@@ -91,6 +104,7 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
     for (const userVault of userVaults.filter((x) => x.borrowedStablecoin.greaterThan(0))) {
       const borrowedStablecoin = userVault.borrowedStablecoin.dividedBy(STABLECOIN_DECIMALS);
       loansHistogram.recordValue(borrowedStablecoin.toNumber());
+      loanBins.push(borrowedStablecoin.toNumber());
       borrowers.add(userVault.owner.toString());
 
       let collateralTotal = new Decimal(0);
@@ -101,6 +115,8 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
       const collRatio = calculateCollateralRatio(borrowedStablecoin, collateralTotal);
       //we record the value in %, histograms don't work well with decimals so this way it's easier
       collateralHistogram.recordValue(collRatio.mul(100).toNumber());
+      collateralBins.push(collRatio.toNumber());
+      loanToValueBins.push(new Decimal(100).dividedBy(collRatio).toNumber());
     }
 
     const totalHbbStaked = stakingPool.totalStake.dividedBy(HBB_DECIMALS);
@@ -110,8 +126,13 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
       const stabilityProvided = calculateStabilityProvided(stabilityPool, stabilityProvider);
       if (stabilityProvided.greaterThan(0)) {
         stabilityHistogram.recordValue(stabilityProvided.dividedBy(STABLECOIN_DECIMALS).toNumber());
+        stabilityBins.push(stabilityProvided.dividedBy(STABLECOIN_DECIMALS).toNumber());
       }
     }
+
+    const maxCollateralBin = maxMinAvg(collateralBins).max;
+    const maxLoanBin = maxMinAvg(loanBins).max;
+    const maxStabilityBin = maxMinAvg(stabilityBins).max;
 
     return {
       collateral: {
@@ -133,6 +154,24 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
           borrowingMarketState.stablecoinBorrowed.dividedBy(STABLECOIN_DECIMALS),
           collateral.deposited
         ),
+        ratioBins: d3BinsToResponse(
+          bin()
+            .domain([0, maxCollateralBin])
+            .thresholds(numberOfBins - 1)(collateralBins),
+          {
+            from: 0,
+            to: maxCollateralBin,
+          }
+        ),
+        ltvBins: d3BinsToResponse(
+          bin()
+            .domain([0, 100])
+            .thresholds(numberOfBins - 1)(loanToValueBins),
+          {
+            from: 0,
+            to: 100,
+          }
+        ),
       },
       hbb: {
         staked: totalHbbStaked,
@@ -152,12 +191,30 @@ async function getMetrics(env: ENV): Promise<MetricsResponse> {
           min: new Decimal(loansHistogram.totalCount > 0 ? loansHistogram.minNonZeroValue : 0),
           average: new Decimal(loansHistogram.mean),
           median: new Decimal(loansHistogram.getValueAtPercentile(50)),
+          bins: d3BinsToResponse(
+            bin()
+              .domain([0, maxLoanBin])
+              .thresholds(numberOfBins - 1)(loanBins),
+            {
+              from: 0,
+              to: maxLoanBin,
+            }
+          ),
         },
       },
       usdh: {
         stabilityPool: totalUsdh,
         stabilityPoolDistribution: getPercentiles(stabilityHistogram),
         issued: borrowingMarketState.stablecoinBorrowed.dividedBy(STABLECOIN_DECIMALS),
+        stabilityPoolBins: d3BinsToResponse(
+          bin()
+            .domain([0, maxStabilityBin])
+            .thresholds(numberOfBins - 1)(stabilityBins),
+          {
+            from: 0,
+            to: maxStabilityBin,
+          }
+        ),
         jupiter: {
           price: jupiterStats.price,
           liquidityPool: jupiterStats.liquidityPool,
