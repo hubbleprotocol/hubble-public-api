@@ -8,6 +8,12 @@ import { badGateway } from '../utils/apiUtils';
 const version = getEnvOrThrow('API_VERSION');
 const redisEnv = getRedisEnvironmentVariables();
 const redis = new RedisService(redisEnv.REDIS_HOST, redisEnv.REDIS_PORT);
+redis
+  .connect()
+  .then(() => console.log(`✅ [redis] Connected at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`))
+  .catch((e) => {
+    console.error(`❌ [redis] could not connect at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`, e);
+  });
 
 /**
  * API Health check and check connection to Redis
@@ -15,10 +21,10 @@ const redis = new RedisService(redisEnv.REDIS_HOST, redisEnv.REDIS_PORT);
 const healthRoute = Router();
 healthRoute.get('/', (request: Request<never, string, never, never>, response) => {
   redis
-    .connect()
+    .ping()
     .then(() => response.send(version))
     .catch((e) => {
-      const err = `could not connect to redis at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`;
+      const err = `could not ping redis at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`;
       console.error(err, e);
       response.status(badGateway).send(err);
     });
