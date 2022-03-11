@@ -9,8 +9,20 @@ export default class RedisService {
     this._client = createClient({ socket: { host: host, port: port } });
   }
 
-  connect() {
-    return this._client.connect();
+  async connect() {
+    for (let i = 0; i < 5; i++) {
+      try {
+        await this._client.connect();
+        return;
+      } catch (e) {
+        if (i === 4) {
+          console.error('could not connect to Redis in 5 tries', e);
+          throw e;
+        }
+        console.error(`[#${i}] could not connect to redis... retrying after 5s`, e);
+        await new Promise((r) => setTimeout(r, 5000));
+      }
+    }
   }
 
   disconnect() {
