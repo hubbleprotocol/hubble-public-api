@@ -1,12 +1,11 @@
 # 🛰 Hubble Public API
 
-Hubble Public API is a TypeScript API that serves public data of the Hubble Protocol.
+Hubble Public API is a TypeScript API (express) that serves public data of the Hubble Protocol.
 
 ## Development
 
 ### Local API Setup
-You will need to use [npm](https://www.npmjs.com/) to install the dependencies. 
-You will also need to install [Netlify CLI](https://docs.netlify.com/cli/get-started/) to run and debug locally.
+You will need to use [npm](https://www.npmjs.com/) to install the dependencies.
 
 We are using private nodes without rate limit for fetching mainnet-beta and devnet chain data.
 You will have to add an `.env` file in the root of this repository with the correct environment variables inside.
@@ -21,47 +20,28 @@ cp .env.example .env
 # ...
 ```
 
-Run the application by launching a Netlify development server:
+We also use Redis for caching historical results from AWS. You can use docker-compose to run an instance of Redis locally.
+
+Run the application and Redis by launching a development server:
 
 ```shell
 cd hubble-public-api
-npm run netlify
+docker-compose up redis -d
+npm run start
 ```
 
-### Local DynamoDB Setup
-
-Our scheduled Netlify function [snapshot.ts](src/netlify/functions/snapshot.ts) saves metrics to DynamoDB. 
-If you want to test this locally without using actual AWS service you can use docker to run a local DynamoDB instance:
+Run both API and Redis with docker-compose:
 
 ```shell
-# go to docker folder
-cd hubble-public-api/docker
-
-# spin up DynamoDB locally with persistent database data in hubble-public-api/docker/dynamodb/data/shared-local-instance.db
-docker-compose up 
-
-# create required tables - this is only required once after first setup, all the data will be persisted on disk
-chmod +x create-dynamodb-tables.sh
-./create-dynamodb-tables.sh
+cd hubble-public-api
+docker-compose up -d
 ```
 
-Local instance will be started on http://localhost:8000.
-
-Before you can invoke the Netlify functions you will also have to add this environment variable to `.env` file (see `.env.example`):
-
-```dotenv
-DYNAMODB_ENDPOINT=http://localhost:8000
-```
+API will be available at http://localhost:8888.
 
 ### Deployment
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/92079dd2-43ae-4966-b3b6-d1b9d009d473/deploy-status)](https://app.netlify.com/sites/hubble-api/deploys)
-
-All of the API routes should be added to the `src/netlify/functions` folder. Deployments are done automatically by using Netlify.
-
-Everything that gets pushed to the `master` branch will be deployed to the production URL: https://api.hubbleprotocol.io.
-
-Make sure to add environment variables `MAINNET_ENDPOINT` and `DEVNET_ENDPOINT` using Netlify site settings UI.
+Deployments are done automatically, everything that gets pushed to the `master` branch will be packaged as a docker container and pushed to Hubble's DockerHub.
 
 ## Usage
 
