@@ -85,7 +85,8 @@ loansRoute.get(
       response.status(badRequest).send(`could not parse public key from: ${request.params.pubkey}`);
       return;
     }
-    response.send('hello world');
+    throw Error('TODO: NOT IMPLEMENTED YET');
+    // response.send('not implemented yet');
   }
 );
 
