@@ -98,4 +98,4 @@ jobs:
           token: ${{ secrets.HUBBLEPROTOCOLBOT_WRITE_REPO_PAT }}
           repository: hubbleprotocol/hubble-infrastructure
           event-type: helm-release
-          client-payload: '{"name": "hubble-public-api", "namespace": "api", "sub_dir": ".", "build_version": "${{ needs.build_docker.outputs.build_version }}", "release_version": "${{ needs.build_docker.outputs.release_version }}", "envs": ["dev", "prod"]}'
+          client-payload: '{"name": "hubble-public-api", "namespace": "api", "sub_dir": ".", "build_version": "${{ needs.build_docker.outputs.build_version }}", "release_version": "${{ needs.build_docker.outputs.release_version }}", "changelog_url": "${{ github.server_url }}/${{ github.repository }}/releases/tag/hubble-public-api%2F${{ needs.build_docker.outputs.release_version }}", "envs": ["dev", "prod"]}'
