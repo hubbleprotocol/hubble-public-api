@@ -1,9 +1,8 @@
 import { Connection } from '@solana/web3.js';
 import { ENV, Web3Client } from '../web3/client';
 import { calculateSwapPrice, loadExchangeInfoFromSwapAccount } from '@saberhq/stableswap-sdk';
-import { HubbleConfig } from '../../models/hubble/HubbleConfig';
 import { PriceResponse } from '../../models/api/PriceResponse';
-import { getConfigByEnv } from '@hubbleprotocol/hubble-config';
+import { getConfigByCluster, HubbleConfig } from '@hubbleprotocol/hubble-config';
 
 export class SaberPriceService {
   private readonly _connection: Connection;
@@ -11,7 +10,7 @@ export class SaberPriceService {
 
   constructor(connection: Connection | undefined = undefined, env: ENV = 'mainnet-beta') {
     this._connection = connection ?? new Web3Client('mainnet-beta').connection;
-    this._config = getConfigByEnv(env);
+    this._config = getConfigByCluster(env);
   }
 
   async getStats(): Promise<PriceResponse> {

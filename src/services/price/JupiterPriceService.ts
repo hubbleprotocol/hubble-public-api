@@ -1,10 +1,9 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { ENV, Web3Client } from '../web3/client';
-import { HubbleConfig } from '../../models/hubble/HubbleConfig';
 import { PriceResponse } from '../../models/api/PriceResponse';
 import { Jupiter } from '@jup-ag/core';
 import { DECIMALS_USDC, STABLECOIN_DECIMALS } from '../../constants/math';
-import { getConfigByEnv } from '@hubbleprotocol/hubble-config';
+import { getConfigByCluster, HubbleConfig } from '@hubbleprotocol/hubble-config';
 
 export class JupiterPriceService {
   private readonly _connection: Connection;
@@ -12,7 +11,7 @@ export class JupiterPriceService {
 
   constructor(connection: Connection | undefined = undefined, env: ENV = 'mainnet-beta') {
     this._connection = connection ?? new Web3Client('mainnet-beta').connection;
-    this._config = getConfigByEnv(env);
+    this._config = getConfigByCluster(env);
   }
 
   async getStats(): Promise<PriceResponse> {

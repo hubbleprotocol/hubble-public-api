@@ -8,7 +8,7 @@ import { getSnapshotEnvVariables } from '../../services/environmentService';
 const environmentVars = getSnapshotEnvVariables();
 
 /**
- * Get current borrowing market state version
+ * Get current borrowing market state version from AWS
  */
 export const handler: Handler = async (event, context) => {
   let env: ENV = 'mainnet-beta';
@@ -24,15 +24,15 @@ export const handler: Handler = async (event, context) => {
   );
   const parameterValue = parameter.Parameter?.Value;
   if (parameterValue) {
-    const maintenanceModeNumber = parseInt(parameterValue);
-    if (isNaN(maintenanceModeNumber)) {
-      const err = `Could not parse maintenance mode value from AWS (has to be number): ${maintenanceParameterValue}`;
+    const borrowingVersionNumber = parseInt(parameterValue);
+    if (isNaN(borrowingVersionNumber)) {
+      const err = `Could not parse borrowing version value from AWS (has to be number): ${parameterValue}`;
       console.error(err);
       return internalError(err);
     }
-    return ok({ version: maintenanceModeNumber });
+    return ok({ version: borrowingVersionNumber });
   } else {
-    const err = 'Could not get maintenance mode value from AWS';
+    const err = 'Could not get borrowing version value from AWS';
     console.error(err);
     return badGateway(err);
   }
