@@ -28,8 +28,6 @@ loansRoute.get('/', async (request: Request<never, LoanResponse[], never, Enviro
   const hubbleSdk = new Hubble(env, web3Client.connection);
   const serumService = createSerumMarketService();
 
-  // none of these requests are dependent on each other, so just bulk GET everything
-  // we use them in an array so we get type-safe array indexing later on, but order is important!
   const responses = await Promise.all([
     serumService.getMarkets(MINT_ADDRESSES, 'confirmed'),
     hubbleSdk.getAllUserMetadatas(),
@@ -37,7 +35,61 @@ loansRoute.get('/', async (request: Request<never, LoanResponse[], never, Enviro
 
   const serumMarkets: Record<string, SerumMarket> = responses[0];
   const userVaults: UserMetadata[] = responses[1];
+  const loans = getLoansFromUserVaults(userVaults, serumMarkets);
 
+  response.send(loans);
+});
+
+interface LoansParameters {
+  pubkey: string;
+}
+/**
+ * Get a list of loans for specific public key (base58 encoded string)
+ */
+loansRoute.get(
+  '/:pubkey',
+  async (request: Request<LoansParameters, LoanResponse[] | string, never, EnvironmentQueryParams>, response) => {
+    let env: ENV = request.query.env ?? 'mainnet-beta';
+    let user = tryGetPublicKeyFromString(request.params.pubkey);
+    if (!user) {
+      response.status(badRequest).send(`could not parse public key from: ${request.params.pubkey}`);
+      return;
+    }
+
+    let web3Client: Web3Client = new Web3Client(env);
+    const hubbleSdk = new Hubble(env, web3Client.connection);
+    const serumService = createSerumMarketService();
+
+    const responses = await Promise.all([
+      serumService.getMarkets(MINT_ADDRESSES, 'confirmed'),
+      hubbleSdk.getUserMetadatas(user),
+    ]);
+
+    const serumMarkets: Record<string, SerumMarket> = responses[0];
+    const userVaults: UserMetadata[] = responses[1];
+    const loans = getLoansFromUserVaults(userVaults, serumMarkets);
+
+    response.send(loans);
+  }
+);
+
+/**
+ * Get history of loans for specific public key (base58 encoded string)
+ */
+loansRoute.get(
+  '/:pubkey/history',
+  async (request: Request<LoansParameters, string, never, EnvironmentQueryParams>, response) => {
+    let env: ENV = request.query.env ?? 'mainnet-beta';
+    let user = tryGetPublicKeyFromString(request.params.pubkey);
+    if (!user) {
+      response.status(badRequest).send(`could not parse public key from: ${request.params.pubkey}`);
+      return;
+    }
+    response.send('hello world');
+  }
+);
+
+function getLoansFromUserVaults(userVaults: UserMetadata[], serumMarkets: Record<string, SerumMarket>) {
   const loans: LoanResponse[] = [];
   for (const userVault of userVaults.filter((x) => x.borrowedStablecoin.greaterThan(0))) {
     const borrowedStablecoin = userVault.borrowedStablecoin.dividedBy(STABLECOIN_DECIMALS);
@@ -65,43 +117,7 @@ loansRoute.get('/', async (request: Request<never, LoanResponse[], never, Enviro
       version: userVault.version,
     });
   }
-
-  response.send(loans);
-});
-
-interface LoansParameters {
-  pubkey: string;
+  return loans;
 }
-/**
- * Get a list of loans for specific public key (base58 encoded string)
- */
-loansRoute.get(
-  '/:pubkey',
-  async (request: Request<LoansParameters, string, never, EnvironmentQueryParams>, response) => {
-    let env: ENV = request.query.env ?? 'mainnet-beta';
-    let user = tryGetPublicKeyFromString(request.params.pubkey);
-    if (!user) {
-      response.status(badRequest).send(`could not parse public key from: ${request.params.pubkey}`);
-      return;
-    }
-    response.send('hello world');
-  }
-);
-
-/**
- * Get history of loans for specific public key (base58 encoded string)
- */
-loansRoute.get(
-  '/:pubkey/history',
-  async (request: Request<LoansParameters, string, never, EnvironmentQueryParams>, response) => {
-    let env: ENV = request.query.env ?? 'mainnet-beta';
-    let user = tryGetPublicKeyFromString(request.params.pubkey);
-    if (!user) {
-      response.status(badRequest).send(`could not parse public key from: ${request.params.pubkey}`);
-      return;
-    }
-    response.send('hello world');
-  }
-);
 
 export default loansRoute;
