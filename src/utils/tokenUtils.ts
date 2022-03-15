@@ -1,5 +1,5 @@
 import { SupportedToken } from '../constants/tokens';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import {
   DECIMALS_BTC,
   DECIMALS_ETH,
@@ -47,4 +47,12 @@ export const lamportsToCollateral = (lamports: Decimal, token: SupportedToken): 
     return lamports;
   }
   return lamports.dividedBy(factor);
+};
+
+export const tryGetPublicKeyFromString = (pubkey: string): PublicKey | undefined => {
+  try {
+    return new PublicKey(pubkey);
+  } catch {
+    return undefined;
+  }
 };
