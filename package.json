@@ -45,7 +45,7 @@
     "axios": "^0.25.0",
     "@jup-ag/core": "^1.0.0-beta.11",
     "bs58": "^4.0.1",
-    "@hubbleprotocol/hubble-idl": "^1.0.6",
-    "@hubbleprotocol/hubble-config": "^1.0.5"
+    "@hubbleprotocol/hubble-idl": "^1.0.25",
+    "@hubbleprotocol/hubble-config": "^1.0.25"
   }
 }
