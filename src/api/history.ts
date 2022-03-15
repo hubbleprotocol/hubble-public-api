@@ -120,11 +120,11 @@ const metricsToHistory = (metrics: MetricsSnapshot[], fromEpoch: number, toEpoch
     });
     response.usdhHistory.push({
       epoch: snapshot.createdOn,
-      value: snapshot.metrics.usdh.issued,
+      value: new Decimal(snapshot.metrics.usdh.issued),
     });
     response.hbbPriceHistory.push({
       epoch: snapshot.createdOn,
-      value: snapshot.metrics.hbb.price,
+      value: new Decimal(snapshot.metrics.hbb.price),
     });
     response.hbbHoldersHistory.push({
       epoch: snapshot.createdOn,
