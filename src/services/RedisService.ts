@@ -1,6 +1,7 @@
 import { createClient, RedisClientType, RedisDefaultModules, RedisModules, RedisScripts } from 'redis';
 import { ENV } from './web3/client';
 import { MetricsSnapshot } from '../models/api/MetricsSnapshot';
+import logger from './logger';
 
 export default class RedisService {
   private _client: RedisClientType<RedisDefaultModules & RedisModules, RedisScripts>;
@@ -16,10 +17,10 @@ export default class RedisService {
         return;
       } catch (e) {
         if (i === 4) {
-          console.error('could not connect to Redis in 5 tries', e);
+          logger.error('could not connect to Redis in 5 tries', e);
           throw e;
         }
-        console.error(`[#${i}] could not connect to redis... retrying after 5s`, e);
+        logger.error(`[#${i}] could not connect to redis... retrying after 5s`, e);
         await new Promise((r) => setTimeout(r, 5000));
       }
     }
@@ -51,7 +52,7 @@ export default class RedisService {
 
     const key = `history-${env}`;
 
-    console.log('cache metrics in redis:', key, 'expire at:', expireAt);
+    logger.info('cache metrics in redis:', key, 'expire at:', expireAt);
 
     await this._client.set(key, JSON.stringify(metrics));
     await this._client.expireAt(key, expireAt);

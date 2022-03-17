@@ -9,17 +9,19 @@ import Router from 'express-promise-router';
 import { Request } from 'express';
 import RedisService from '../services/RedisService';
 import Decimal from 'decimal.js';
+import logger from '../services/logger';
 
 const awsEnv = getAwsEnvironmentVariables();
 const dynamoDb = getDynamoDb(awsEnv.AWS_ACCESS_KEY_ID, awsEnv.AWS_SECRET_ACCESS_KEY, awsEnv.AWS_REGION);
 
 const redisEnv = getRedisEnvironmentVariables();
+const redisUrl = `http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`;
 const redis = new RedisService(redisEnv.REDIS_HOST, redisEnv.REDIS_PORT);
 redis
   .connect()
-  .then(() => console.log(`✅ [redis] Connected at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`))
+  .then(() => logger.info(`✅ [redis] Connected at ${redisUrl}`))
   .catch((e) => {
-    console.error(`❌ [redis] could not connect at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`, e);
+    logger.error(`❌ [redis] could not connect at ${redisUrl}`, e);
   });
 
 /**
@@ -48,7 +50,7 @@ historyRoute.get('/', async (request: Request<never, string, never, HistoryQuery
 });
 
 async function saveMetricsToCache(env: ENV) {
-  console.log('saving all metrics to cache');
+  logger.info('saving all metrics to cache', env);
   // load up 1 year of history to cache
   const fromEpoch = new Date();
   fromEpoch.setFullYear(fromEpoch.getFullYear() - 1);
@@ -73,7 +75,7 @@ async function getQueryResults(params: DocumentClient.QueryInput) {
         results.push(snapshot);
       }
     } else {
-      console.error(`could not get history from AWS ${history}`);
+      logger.error(`could not get history from AWS ${history}`);
       throw Error('Could not get history data from AWS');
     }
     params.ExclusiveStartKey = queryResults.LastEvaluatedKey;
@@ -94,7 +96,7 @@ async function getHistory(env: ENV, fromEpoch: number, toEpoch: number): Promise
 
     return { status: ok, body: metricsToHistory(filteredMetrics, fromEpoch, toEpoch) };
   } catch (e) {
-    console.error(e);
+    logger.error(e);
     return { status: internalError, body: e instanceof Error ? e.message : e };
   }
 }

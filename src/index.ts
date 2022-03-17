@@ -1,3 +1,5 @@
+import logger from './services/logger';
+
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
@@ -15,8 +17,5 @@ app.use(routes);
 
 const port = process.env.SERVER_PORT || 8888;
 app.listen(port, () => {
-  console.log(`✅️[server] Server is running at http://localhost:${port}`);
+  logger.info(`✅️[server] Server is running at http://localhost:${port}`);
 });
-
-//TODO:
-// - update readme

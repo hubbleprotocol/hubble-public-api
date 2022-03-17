@@ -1,5 +1,6 @@
 import { ENV, Web3Client } from '../services/web3/client';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
+import logger from '../services/logger';
 
 export const ok = 200;
 export const badRequest = 400;
@@ -21,7 +22,7 @@ export const parseFromQueryParams = (
     web3Client = new Web3Client(env);
   } catch (e) {
     const error = e as Error;
-    console.error(error);
+    logger.error(error);
     return [undefined, undefined, error.message];
   }
 

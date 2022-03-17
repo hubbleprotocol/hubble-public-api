@@ -20,6 +20,7 @@ import {
   StabilityPoolState,
   StabilityProviderState,
 } from '@hubbleprotocol/hubble-sdk';
+import logger from '../services/logger';
 
 export const getTokenCollateral = (
   token: SupportedToken,
@@ -90,7 +91,7 @@ export const getTotalCollateral = async (markets: Record<string, SerumMarket>, m
     !markets[SRM_MINT]?.midPrice ||
     !markets[MSOL_MINT]?.midPrice
   ) {
-    console.error('error getting all prices from Serum', markets);
+    logger.error('error getting all prices from Serum', markets);
     throw Error('Could not get all prices from Serum');
   }
   let collateralTotals: CollateralTotals[] = [];

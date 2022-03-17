@@ -7,6 +7,7 @@ import { ENV } from '../services/web3/client';
 import { getBorrowingVersionParameterName } from '../constants/hubble';
 import { getParameter } from '../utils/awsUtils';
 import { getAwsEnvironmentVariables } from '../services/environmentService';
+import logger from '../services/logger';
 
 const awsEnv = getAwsEnvironmentVariables();
 
@@ -33,14 +34,14 @@ borrowingVersionRoute.get(
       const borrowingVersion = parseInt(borrowingVersionValue);
       if (isNaN(borrowingVersion)) {
         const err = `Could not parse borrowing version value from AWS (has to be number): ${borrowingVersionValue}`;
-        console.error(err);
+        logger.error(err);
         response.status(internalError).send(err);
         return;
       }
       response.send({ version: borrowingVersion });
     } else {
       const err = 'Could not get borrowing version value from AWS';
-      console.error(err);
+      logger.error(err);
       response.status(badGateway).send(err);
     }
   }
