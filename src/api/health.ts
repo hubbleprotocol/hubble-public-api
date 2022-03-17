@@ -23,10 +23,16 @@ healthRoute.get('/', (request: Request<never, string, never, never>, response) =
   redis
     .ping()
     .then(() => response.send(version))
-    .catch((e) => {
+    .catch(async (e) => {
       const err = `could not ping redis at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`;
       console.error(err, e);
-      response.status(badGateway).send(err);
+      console.log('retrying connection to redis');
+      await redis
+        .connect()
+        .then(() => console.log(`✅ [redis] Connected at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`))
+        .catch(() => {
+          response.status(badGateway).send(err);
+        });
     });
 });
 
