@@ -7,6 +7,7 @@ import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { MaintenanceModeResponse } from '../models/api/MaintenanceModeResponse';
 import { Request } from 'express';
 import Router from 'express-promise-router';
+import logger from '../services/logger';
 
 const awsEnv = getAwsEnvironmentVariables();
 
@@ -33,14 +34,14 @@ maintenanceModeRoute.get(
       const maintenanceModeNumber = parseInt(maintenanceParameterValue);
       if (isNaN(maintenanceModeNumber)) {
         const err = `Could not parse maintenance mode value from AWS (has to be number): ${maintenanceParameterValue}`;
-        console.error(err);
+        logger.error(err);
         response.status(internalError).send(err);
         return;
       }
       response.send({ enabled: maintenanceModeNumber > 0 });
     } else {
       const err = 'Could not get maintenance mode value from AWS';
-      console.error(err);
+      logger.error(err);
       response.status(badGateway).send(err);
     }
   }

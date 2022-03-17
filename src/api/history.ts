@@ -7,20 +7,16 @@ import { getDynamoDb } from '../utils/awsUtils';
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import Router from 'express-promise-router';
 import { Request } from 'express';
-import RedisService from '../services/RedisService';
 import Decimal from 'decimal.js';
+import logger from '../services/logger';
+import getRedisClient from '../services/redis';
+import { RedisClientType, RedisDefaultModules, RedisModules, RedisScripts } from 'redis';
 
 const awsEnv = getAwsEnvironmentVariables();
 const dynamoDb = getDynamoDb(awsEnv.AWS_ACCESS_KEY_ID, awsEnv.AWS_SECRET_ACCESS_KEY, awsEnv.AWS_REGION);
 
 const redisEnv = getRedisEnvironmentVariables();
-const redis = new RedisService(redisEnv.REDIS_HOST, redisEnv.REDIS_PORT);
-redis
-  .connect()
-  .then(() => console.log(`✅ [redis] Connected at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`))
-  .catch((e) => {
-    console.error(`❌ [redis] could not connect at http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`, e);
-  });
+const redisUrl = `http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`;
 
 /**
  * Get Hubble on-chain historical metrics
@@ -47,8 +43,11 @@ historyRoute.get('/', async (request: Request<never, string, never, HistoryQuery
   }
 });
 
-async function saveMetricsToCache(env: ENV) {
-  console.log('saving all metrics to cache');
+async function saveMetricsToCache(
+  env: ENV,
+  redisClient: RedisClientType<RedisDefaultModules & RedisModules, RedisScripts>
+) {
+  logger.info({ message: 'saving all metrics to cache', env });
   // load up 1 year of history to cache
   const fromEpoch = new Date();
   fromEpoch.setFullYear(fromEpoch.getFullYear() - 1);
@@ -59,8 +58,39 @@ async function saveMetricsToCache(env: ENV) {
     ExpressionAttributeValues: { ':envValue': env, ':fromEpoch': fromEpoch.valueOf() },
   };
   const queryResults = await getQueryResults(params);
-  await redis.setMetrics(queryResults, env);
+  await setHistoryMetrics(queryResults, env, redisClient);
   return queryResults;
+}
+
+async function getCachedHistoryMetrics(
+  env: ENV,
+  redisClient: RedisClientType<RedisDefaultModules & RedisModules, RedisScripts>
+) {
+  const history = await redisClient.get(`history-${env}`);
+  if (history) {
+    return JSON.parse(history) as MetricsSnapshot[];
+  }
+  return undefined;
+}
+
+async function setHistoryMetrics(
+  metrics: MetricsSnapshot[],
+  env: ENV,
+  redisClient: RedisClientType<RedisDefaultModules & RedisModules, RedisScripts>
+) {
+  // expire the metrics cache on the first minute of the next hour, we only keep hourly snapshots of history in dynamodb and refresh once per hour
+  // for example, we save to cache at 10:15, hourly snapshot is saved to dynamodb at 11:00, we need to refresh the cache at 11:01
+  const expireAt = new Date();
+  expireAt.setHours(expireAt.getHours() + 1);
+  expireAt.setMinutes(1);
+  expireAt.setSeconds(0);
+
+  const key = `history-${env}`;
+
+  logger.info({ message: 'cache history metrics in redis', key, expireAt, redisUrl });
+
+  await redisClient.set(key, JSON.stringify(metrics));
+  await redisClient.expireAt(key, expireAt);
 }
 
 async function getQueryResults(params: DocumentClient.QueryInput) {
@@ -73,7 +103,7 @@ async function getQueryResults(params: DocumentClient.QueryInput) {
         results.push(snapshot);
       }
     } else {
-      console.error(`could not get history from AWS ${history}`);
+      logger.error(`could not get history from AWS ${history}`);
       throw Error('Could not get history data from AWS');
     }
     params.ExclusiveStartKey = queryResults.LastEvaluatedKey;
@@ -83,9 +113,10 @@ async function getQueryResults(params: DocumentClient.QueryInput) {
 
 async function getHistory(env: ENV, fromEpoch: number, toEpoch: number): Promise<{ status: number; body: any }> {
   try {
-    let cachedMetrics = await redis.getMetrics(env);
+    const redis = await getRedisClient(redisEnv.REDIS_HOST, redisEnv.REDIS_PORT);
+    let cachedMetrics = await getCachedHistoryMetrics(env, redis);
     if (!cachedMetrics) {
-      cachedMetrics = await saveMetricsToCache(env);
+      cachedMetrics = await saveMetricsToCache(env, redis);
     }
 
     const filteredMetrics = cachedMetrics.filter((x) => x.createdOn >= fromEpoch && x.createdOn <= toEpoch);
@@ -94,7 +125,7 @@ async function getHistory(env: ENV, fromEpoch: number, toEpoch: number): Promise
 
     return { status: ok, body: metricsToHistory(filteredMetrics, fromEpoch, toEpoch) };
   } catch (e) {
-    console.error(e);
+    logger.error(e);
     return { status: internalError, body: e instanceof Error ? e.message : e };
   }
 }
