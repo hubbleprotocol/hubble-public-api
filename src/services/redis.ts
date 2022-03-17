@@ -27,11 +27,12 @@ async function getClient(host: string, port: number) {
   return client;
 }
 
-export function getRedisClient(host: string, port: number) {
-  if (redisClient) {
+export async function getRedisClient(host: string, port: number) {
+  if (redisClient !== undefined) {
     return redisClient;
   }
-  return getClient(host, port);
+  redisClient = await getClient(host, port);
+  return redisClient;
 }
 
 export default getRedisClient;
