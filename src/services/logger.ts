@@ -1,4 +1,5 @@
 import { createLogger, format, transports } from 'winston';
+import { StreamOptions } from 'morgan';
 
 const logger = createLogger({
   level: 'info',
@@ -17,7 +18,7 @@ const logger = createLogger({
   ],
 });
 
-export const loggingStream = {
+export const loggingStream: StreamOptions = {
   write: (text: string) => {
     logger.info(text.trim());
   },
