@@ -57,6 +57,7 @@
     "express-promise-router": "^4.1.1",
     "hdr-histogram-js": "^3.0.0",
     "jsbi": "^4.1.0",
+    "morgan": "^1.10.0",
     "redis": "^4.0.4",
     "winston": "^3.6.0"
   }

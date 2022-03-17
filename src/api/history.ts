@@ -50,7 +50,7 @@ historyRoute.get('/', async (request: Request<never, string, never, HistoryQuery
 });
 
 async function saveMetricsToCache(env: ENV) {
-  logger.info('saving all metrics to cache', env);
+  logger.info({ message: 'saving all metrics to cache', env });
   // load up 1 year of history to cache
   const fromEpoch = new Date();
   fromEpoch.setFullYear(fromEpoch.getFullYear() - 1);

@@ -26,9 +26,9 @@ healthRoute.get('/', (request: Request<never, string, never, never>, response) =
     .ping()
     .then(() => response.send(version))
     .catch(async (e) => {
-      const err = `could not ping redis at ${redisUrl}`;
+      const err = `could not ping redis ${redisUrl}`;
       logger.warn(err, e);
-      logger.info('retrying connection to redis', redisUrl);
+      logger.info({ message: 'retrying connection to redis', redisUrl });
       await redis
         .connect()
         .then(() => logger.info(`✅ [redis] Connected at ${redisUrl}`))

@@ -16,4 +16,11 @@ const logger = createLogger({
       : new transports.Console(),
   ],
 });
+
+export const loggingStream = {
+  write: (text: string) => {
+    logger.info(text.trim());
+  },
+};
+
 export default logger;

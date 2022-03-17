@@ -52,7 +52,7 @@ export default class RedisService {
 
     const key = `history-${env}`;
 
-    logger.info('cache metrics in redis:', key, 'expire at:', expireAt);
+    logger.info({ message: 'cache metrics in redis', key, expireAt });
 
     await this._client.set(key, JSON.stringify(metrics));
     await this._client.expireAt(key, expireAt);
