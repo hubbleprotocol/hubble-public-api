@@ -1,0 +1,39 @@
+{
+  "name": "hubble-historian",
+  "version": "1.0.0",
+  "description": "Save on-chain Hubble data to a database",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon src/index.ts",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hubbleprotocol/hubble-public-api.git"
+  },
+  "keywords": [
+    "hubble",
+    "hubble-protocol",
+    "historian"
+  ],
+  "author": "Hubble Protocol",
+  "license": "Apache License",
+  "bugs": {
+    "url": "https://github.com/hubbleprotocol/hubble-public-api/issues"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.21",
+    "dotenv": "^16.0.0",
+    "nodemon": "^2.0.15",
+    "prettier": "^2.5.1",
+    "ts-node": "^10.5.0",
+    "typescript": "^4.5.5"
+  },
+  "dependencies": {
+    "@hubbleprotocol/hubble-db": "^1.0.26",
+    "axios": "^0.26.0",
+    "winston": "^3.6.0",
+    "knex": "^1.0.4",
+    "pg": "^8.7.3"
+  }
+}
