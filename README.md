@@ -4,6 +4,25 @@ Hubble Public API is a TypeScript API (express) that serves public data of the H
 
 ## Development
 
+### Database
+
+We use Flyway for database migrations and PostgreSQL for data storage.
+
+Run migrations with docker:
+
+```shell
+# Run postgresql at localhost:5432 and apply flyway migrations
+docker-compose up db flyway
+```
+
+Generate TypeScript interfaces from local PostgreSQL database (reads [postgres.json](./postgres.json) file):
+
+```shell
+npx @rmp135/sql-ts -c postgres.json
+```
+
+This will generate a `Database.ts` file that should be checked, modified if needed and moved to [database](./src/models/database) folder.
+
 ### Local API Setup
 You will need to use [npm](https://www.npmjs.com/) to install the dependencies.
 
@@ -22,15 +41,15 @@ cp .env.example .env
 
 We also use Redis for caching historical results from AWS. You can use docker-compose to run an instance of Redis locally.
 
-Run the application and Redis by launching a development server:
+Run the API with npm (for debugging) and dependencies with docker-compose:
 
 ```shell
 cd hubble-public-api
-docker-compose up redis -d
+docker-compose up redis db flyway -d
 npm run start
 ```
 
-Run both API and Redis with docker-compose:
+Run everything with docker-compose:
 
 ```shell
 cd hubble-public-api
