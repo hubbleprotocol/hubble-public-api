@@ -25,7 +25,7 @@ routesList.push({ endpoint: '/version', route: versionRoute });
 routesList.push({ endpoint: '/health', route: healthRoute });
 routesList.push({ endpoint: '/maintenance-mode', route: maintenanceModeRoute });
 routesList.push({ endpoint: '/borrowing-version', route: borrowingVersionRoute });
-routesList.push({ endpoint: '/loans', route: loansRoute });
+routesList.push({ endpoint: '/', route: loansRoute });
 
 for (const route of routesList) {
   routes.use(route.endpoint, route.route);
