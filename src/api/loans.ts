@@ -5,13 +5,13 @@ import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { badRequest } from '../utils/apiUtils';
 import { tryGetPublicKeyFromString } from '../utils/tokenUtils';
 import { MINT_ADDRESSES, SUPPORTED_TOKENS } from '../constants/tokens';
-import { Hubble, UserMetadata } from '@hubbleprotocol/hubble-sdk';
+import { Hubble, UserMetadata, UserMetadataWithJson } from '@hubbleprotocol/hubble-sdk';
 import Decimal from 'decimal.js';
 import { calculateCollateralRatio, getTokenCollateral } from '../utils/calculations';
 import { STABLECOIN_DECIMALS } from '../constants/math';
 import { createSerumMarketService } from '../services/serum/SerumMarketService';
 import { SerumMarket } from '../models/SerumMarket';
-import { LoanResponse } from '../models/api/LoanResponse';
+import { LoanResponse, LoanResponseWithJson } from '../models/api/LoanResponse';
 import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 
 /**
@@ -22,24 +22,36 @@ const loansRoute = Router();
 /**
  * Get all loans
  */
-loansRoute.get('/', async (request: Request<never, LoanResponse[], never, EnvironmentQueryParams>, response) => {
-  let env: ENV = request.query.env ?? 'mainnet-beta';
+loansRoute.get(
+  '/',
+  async (
+    request: Request<
+      never,
+      LoanResponse[],
+      never,
+      EnvironmentQueryParams & { includeJsonResponse: string | undefined }
+    >,
+    response
+  ) => {
+    let env: ENV = request.query.env ?? 'mainnet-beta';
+    const includeJsonResponse =
+      (request.query.includeJsonResponse || request.query.includeJsonResponse === '') ?? false;
 
-  let web3Client: Web3Client = new Web3Client(env);
-  const hubbleSdk = new Hubble(env, web3Client.connection);
-  const serumService = createSerumMarketService();
+    let web3Client: Web3Client = new Web3Client(env);
+    const hubbleSdk = new Hubble(env, web3Client.connection);
+    const serumService = createSerumMarketService();
 
-  const responses = await Promise.all([
-    serumService.getMarkets(MINT_ADDRESSES, 'confirmed'),
-    hubbleSdk.getAllUserMetadatas(),
-  ]);
+    const responses = await Promise.all([
+      serumService.getMarkets(MINT_ADDRESSES, 'confirmed'),
+      includeJsonResponse ? hubbleSdk.getAllUserMetadatasIncludeJsonResponse() : hubbleSdk.getAllUserMetadatas(),
+    ]);
 
-  const serumMarkets: Record<string, SerumMarket> = responses[0];
-  const userVaults: UserMetadata[] = responses[1];
-  const loans = getLoansFromUserVaults(userVaults, serumMarkets);
-
-  response.send(loans);
-});
+    const serumMarkets: Record<string, SerumMarket> = responses[0];
+    const userVaults = responses[1];
+    const loans = getLoansFromUserVaults(userVaults, serumMarkets);
+    response.send(loans);
+  }
+);
 
 interface LoansParameters {
   pubkey: string;
@@ -51,6 +63,7 @@ loansRoute.get(
   '/:pubkey',
   async (request: Request<LoansParameters, LoanResponse[] | string, never, EnvironmentQueryParams>, response) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
+
     let user = tryGetPublicKeyFromString(request.params.pubkey);
     if (!user) {
       response.status(badRequest).send(`could not parse public key from: ${request.params.pubkey}`);
@@ -114,8 +127,11 @@ loansRoute.get(
   }
 );
 
-function getLoansFromUserVaults(userVaults: UserMetadata[], serumMarkets: Record<string, SerumMarket>) {
-  const loans: LoanResponse[] = [];
+function getLoansFromUserVaults(
+  userVaults: UserMetadata[] | UserMetadataWithJson[],
+  serumMarkets: Record<string, SerumMarket>
+) {
+  const loans: LoanResponse | LoanResponseWithJson[] = [];
   for (const userVault of userVaults.filter((x) => x.borrowedStablecoin.greaterThan(0))) {
     const borrowedStablecoin = userVault.borrowedStablecoin.dividedBy(STABLECOIN_DECIMALS);
     let collateralTotal = new Decimal(0);
@@ -128,7 +144,7 @@ function getLoansFromUserVaults(userVaults: UserMetadata[], serumMarkets: Record
     const collRatio = calculateCollateralRatio(borrowedStablecoin, collateralTotal);
     const ltv = new Decimal(100).dividedBy(collRatio);
 
-    loans.push({
+    const loan = {
       loanToValue: ltv,
       totalCollateralValue: collateralTotal,
       collateral: collateralTotals,
@@ -140,7 +156,11 @@ function getLoansFromUserVaults(userVaults: UserMetadata[], serumMarkets: Record
       userId: userVault.userId,
       borrowingMarketState: userVault.borrowingMarketState,
       version: userVault.version,
-    });
+    } as LoanResponseWithJson;
+    if (userVault.hasOwnProperty('jsonResponse')) {
+      loan.jsonResponse = (userVault as UserMetadataWithJson).jsonResponse;
+    }
+    loans.push(loan);
   }
   return loans;
 }
