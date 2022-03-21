@@ -29,7 +29,7 @@
     "typescript": "^4.5.5"
   },
   "dependencies": {
-    "@hubbleprotocol/hubble-db": "^1.0.27",
+    "@hubbleprotocol/hubble-db": "^1.0.29",
     "@hubbleprotocol/hubble-sdk": "^1.0.25",
     "axios": "^0.26.0",
     "winston": "^3.6.0",

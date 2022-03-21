@@ -12,7 +12,7 @@ import {
   TOKEN_TABLE,
   TokenEntity,
 } from '@hubbleprotocol/hubble-db';
-import { LoanResponse } from '../models/LoanResponse';
+import { LoanResponseWithJson } from '../models/LoanResponse';
 
 export const connectionString =
   process.env.POSTGRES_CONNECTION_STRING || 'postgres://hubbleUser:hubblePass@localhost:5432/hubble-public-api-local';
@@ -82,7 +82,7 @@ export const getOrInsertOwner = async (ownerPubKey: string, clusterId: number) =
  * @param loans Loan data of the owner
  * @param timestamp Timestamp of snapshot capture
  */
-export const insertLoans = async (owner: OwnerEntity, loans: LoanResponse[], timestamp: Date) => {
+export const insertLoans = async (owner: OwnerEntity, loans: LoanResponseWithJson[], timestamp: Date) => {
   return postgres.transaction(async (tx) => {
     const tokens: TokenEntity[] = [];
     for (const token of [...new Set(loans.flatMap((x) => x.collateral).map((x) => x.token))]) {
@@ -98,6 +98,10 @@ export const insertLoans = async (owner: OwnerEntity, loans: LoanResponse[], tim
       tokens.push(tokenDto);
     }
     for (const loan of loans) {
+      // loan JSON response has escaped characters since its a raw json inside a json
+      // this means we first parse it and get rid of escaped characters
+      // then we stringify it again and insert it into database
+      const rawJson = JSON.stringify(JSON.parse(loan.jsonResponse));
       await postgres(LOAN_TABLE)
         .insert<LoanEntity>({
           loan_to_value: loan.loanToValue,
@@ -111,6 +115,7 @@ export const insertLoans = async (owner: OwnerEntity, loans: LoanResponse[], tim
           total_collateral_value: loan.totalCollateralValue,
           usdh_debt: loan.usdhDebt,
           user_id: loan.userId,
+          raw_json: rawJson,
         })
         .returning<RowId[]>('id')
         .transacting(tx)

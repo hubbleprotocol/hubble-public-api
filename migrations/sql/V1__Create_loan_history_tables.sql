@@ -46,6 +46,7 @@ CREATE TABLE api.loan
     user_id                       numeric                  NOT NULL,
     borrowing_market_state_pubkey text                     NOT NULL,
     owner_id                      int                      NOT NULL,
+    raw_json                      jsonb                    NOT NULL,
     CONSTRAINT loan_PK PRIMARY KEY ("id"),
     CONSTRAINT FK_owner_loan FOREIGN KEY (owner_id) REFERENCES api.owner ("id")
 );

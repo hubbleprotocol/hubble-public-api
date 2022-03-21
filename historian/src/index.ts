@@ -1,7 +1,7 @@
 import logger from './services/logger';
 import { getOrInsertCluster, getOrInsertOwner, insertLoans, testConnection } from './services/database';
 import axios from 'axios';
-import { LoanResponse } from './models/LoanResponse';
+import { LoanResponseWithJson } from './models/LoanResponse';
 import { groupBy } from './utils/arrayUtils';
 
 const apiUrl =
@@ -24,7 +24,7 @@ logger.info({ message: 'Starting hubble historian' });
 
       let timestamp = new Date();
       logger.info({ message: 'getting data from hubble api', apiUrl, cluster });
-      const loans = (await api.get<LoanResponse[]>(`/loans?env=${cluster}`)).data;
+      const loans = (await api.get<LoanResponseWithJson[]>(`/loans?env=${cluster}&includeJsonResponse`)).data;
       logger.info({ message: `got ${loans.length} loans from hubble api`, apiUrl, cluster });
 
       for (const [owner, ownerLoans] of groupBy(loans, (x) => x.owner)) {
