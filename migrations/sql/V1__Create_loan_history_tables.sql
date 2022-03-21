@@ -30,26 +30,6 @@ CREATE INDEX fk_cluster_owner ON api.owner
      cluster_id
         );
 
-
-CREATE TABLE api.collateral
-(
-    "id"               int     NOT NULL GENERATED ALWAYS AS IDENTITY (
-        start 1
-        ),
-    deposited_quantity numeric NOT NULL,
-    inactive_quantity  numeric NOT NULL,
-    price              numeric NOT NULL,
-    token_id           int     NOT NULL,
-    CONSTRAINT pk_collateral PRIMARY KEY ("id"),
-    CONSTRAINT fk_token_collateral FOREIGN KEY (token_id) REFERENCES api."token" ("id")
-);
-
-CREATE INDEX fk_token_collateral ON api.collateral
-    (
-     token_id
-        );
-
-
 CREATE TABLE api.loan
 (
     "id"                          int                      NOT NULL GENERATED ALWAYS AS IDENTITY (
@@ -76,22 +56,27 @@ CREATE INDEX FK_owner_loan ON api.loan
         );
 
 
-CREATE TABLE api.loan_collateral
+CREATE TABLE api.collateral
 (
-    "id"          int NOT NULL GENERATED ALWAYS AS IDENTITY,
-    loan_id       int NOT NULL,
-    collateral_id int NOT NULL,
-    CONSTRAINT PK_loan_collateral PRIMARY KEY ("id"),
-    CONSTRAINT fk_collateral_loan_collateral FOREIGN KEY (collateral_id) REFERENCES api.collateral ("id"),
-    CONSTRAINT fk_loan_loan_collateral FOREIGN KEY (loan_id) REFERENCES api.loan ("id")
+    "id"                 int NOT NULL GENERATED ALWAYS AS IDENTITY (
+        start 1
+        ),
+    deposited_quantity numeric NOT NULL,
+    inactive_quantity  numeric NOT NULL,
+    price              numeric NOT NULL,
+    token_id           int NOT NULL,
+    loan_id            int NOT NULL,
+    CONSTRAINT pk_collateral PRIMARY KEY ( "id" ),
+    CONSTRAINT fk_loan_collateral FOREIGN KEY ( loan_id ) REFERENCES api.loan ( "id" ),
+    CONSTRAINT fk_token_collateral FOREIGN KEY ( token_id ) REFERENCES api."token" ( "id" )
 );
 
-CREATE INDEX fk_collateral_loan_collateral ON api.loan_collateral
-    (
-     collateral_id
-        );
-
-CREATE INDEX fk_loan_loan_collateral ON api.loan_collateral
+CREATE INDEX FK_72 ON api.collateral
     (
      loan_id
+        );
+
+CREATE INDEX fk_token_collateral ON api.collateral
+    (
+     token_id
         );
