@@ -14,6 +14,7 @@ import { SerumMarket } from '../models/SerumMarket';
 import { LoanResponse, LoanResponseWithJson } from '../models/api/LoanResponse';
 import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 import { PublicKey } from '@solana/web3.js';
+import { getLoanHistory } from '../services/database';
 
 /**
  * Get live Hubble on-chain loan data
@@ -97,33 +98,13 @@ loansRoute.get(
     request: Request<LoansParameters, LoanHistoryResponse[] | string, never, EnvironmentQueryParams>,
     response
   ) => {
-    // - TODO GET loans/:metadataPubKey/history - get history of loan with metadata pubkey
-    // query and get from database...
     let env: ENV = request.query.env ?? 'mainnet-beta';
-    let user = tryGetPublicKeyFromString(request.params.pubkey);
-    if (!user) {
+    let loan = tryGetPublicKeyFromString(request.params.pubkey);
+    if (!loan) {
       response.status(badRequest).send(`could not parse public key from: ${request.params.pubkey}`);
       return;
     }
-
-    let web3Client: Web3Client = new Web3Client(env);
-    const hubbleSdk = new Hubble(env, web3Client.connection);
-    const serumService = createSerumMarketService();
-
-    const responses = await Promise.all([
-      serumService.getMarkets(MINT_ADDRESSES, 'confirmed'),
-      hubbleSdk.getUserMetadatas(user),
-    ]);
-
-    const serumMarkets: Record<string, SerumMarket> = responses[0];
-    const userVaults: UserMetadata[] = responses[1];
-    const loans = getLoansFromUserVaults(userVaults, serumMarkets);
-
-    const history = [];
-    for (let i = 0; i < 3; i++) {
-      history.push({ epoch: new Date().valueOf() + i * 5000, loans: loans });
-    }
-
+    const history = await getLoanHistory(loan, env);
     response.send(history);
   }
 );
