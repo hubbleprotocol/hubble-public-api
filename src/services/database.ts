@@ -14,11 +14,14 @@ import Decimal from 'decimal.js';
 import { groupBy } from '../../historian/src/utils/arrayUtils';
 import { CollateralTotals, SupportedToken } from '@hubbleprotocol/hubble-sdk';
 import { ENV } from './web3/client';
+import { getEnvOrDefault, getEnvOrThrowInProduction } from '../utils/envUtils';
 
-export const connectionString =
-  process.env.POSTGRES_CONNECTION_STRING || 'postgres://hubbleUser:hubblePass@localhost:5432/hubble-public-api-local';
-export const poolMin = Number(process.env.POSTGRES_POOL_MIN || '0');
-export const poolMax = Number(process.env.POSTGRES_POOL_MAX || '10');
+export const connectionString = getEnvOrThrowInProduction(
+  'POSTGRES_CONNECTION_STRING',
+  'postgres://hubbleUser:hubblePass@localhost:5432/hubble-public-api-local'
+);
+export const poolMin = Number(getEnvOrDefault('POSTGRES_POOL_MIN', '0'));
+export const poolMax = Number(getEnvOrDefault('POSTGRES_POOL_MAX', '10'));
 
 const getPostgresProvider = () => {
   const knex = KnexInit({
@@ -37,25 +40,27 @@ const getPostgresProvider = () => {
 
 let postgres = getPostgresProvider();
 
+type JoinedLoanRow = {
+  usdh_debt: string;
+  total_collateral_value: string;
+  collateral_ratio: string;
+  loan_to_value: string;
+  owner_pubkey: string;
+  version: string;
+  status: string;
+  user_id: string;
+  user_metadata_pubkey: string;
+  borrowing_market_state_pubkey: string;
+  deposited_quantity: string;
+  inactive_quantity: string;
+  price: string;
+  token_name: string;
+  created_on: Date;
+};
+
 export const getLoanHistory = async (loan: PublicKey, cluster: ENV) => {
   const history: LoanHistoryResponse[] = [];
-  type JoinedLoanRow = {
-    usdh_debt: string;
-    total_collateral_value: string;
-    collateral_ratio: string;
-    loan_to_value: string;
-    owner_pubkey: string;
-    version: string;
-    status: string;
-    user_id: string;
-    user_metadata_pubkey: string;
-    borrowing_market_state_pubkey: string;
-    deposited_quantity: string;
-    inactive_quantity: string;
-    price: string;
-    token_name: string;
-    created_on: Date;
-  };
+
   const rows = await postgres(`${LOAN_TABLE} as l`)
     .select<JoinedLoanRow[]>(
       'l.usdh_debt',
