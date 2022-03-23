@@ -73,6 +73,8 @@ service-base-chart:
       value: "6379"
     - name: REDIS_HOST
       value: "redis-hubble-public-api-master"
+    - name: POSTGRES_POOL_MIN
+      value: "1"
 
   secrets:
     MAINNET_ENDPOINT:
