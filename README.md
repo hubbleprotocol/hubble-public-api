@@ -15,14 +15,6 @@ Run migrations with docker:
 docker-compose up db flyway
 ```
 
-Generate TypeScript interfaces from local PostgreSQL database (reads [postgres.json](./postgres.json) file):
-
-```shell
-npx @rmp135/sql-ts -c postgres.json
-```
-
-This will generate a `Database.ts` file that should be checked, modified if needed and moved to [database](./src/models/database) folder.
-
 ### Local API Setup
 You will need to use [npm](https://www.npmjs.com/) to install the dependencies.
 
