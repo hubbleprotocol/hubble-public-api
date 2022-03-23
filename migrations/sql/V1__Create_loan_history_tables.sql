@@ -4,7 +4,7 @@ CREATE TABLE api.cluster
         start 1
         ),
     name text NOT NULL,
-    CONSTRAINT cluster_PK PRIMARY KEY ("id")
+    CONSTRAINT pk_cluster PRIMARY KEY ("id")
 );
 
 CREATE TABLE api."token"
@@ -21,11 +21,11 @@ CREATE TABLE api.owner
         ),
     pubkey     text NOT NULL,
     cluster_id int  NOT NULL,
-    CONSTRAINT owner_PK PRIMARY KEY ("id"),
-    CONSTRAINT FK_cluster_owner FOREIGN KEY (cluster_id) REFERENCES api.cluster ("id")
+    CONSTRAINT pk_owner PRIMARY KEY ("id"),
+    CONSTRAINT fk__cluster_id__cluster_id FOREIGN KEY (cluster_id) REFERENCES api.cluster ("id")
 );
 
-CREATE INDEX fk_cluster_owner ON api.owner
+CREATE INDEX idx__owner__cluster_id ON api.owner
     (
      cluster_id
         );
@@ -48,10 +48,10 @@ CREATE TABLE api.loan
     owner_id                      int                      NOT NULL,
     raw_json                      jsonb                    NOT NULL,
     CONSTRAINT loan_PK PRIMARY KEY ("id"),
-    CONSTRAINT FK_owner_loan FOREIGN KEY (owner_id) REFERENCES api.owner ("id")
+    CONSTRAINT fk__owner_id__owner_id FOREIGN KEY (owner_id) REFERENCES api.owner ("id")
 );
 
-CREATE INDEX FK_owner_loan ON api.loan
+CREATE INDEX idx__loan__owner_id ON api.loan
     (
      owner_id
         );
@@ -68,16 +68,16 @@ CREATE TABLE api.collateral
     token_id           int NOT NULL,
     loan_id            int NOT NULL,
     CONSTRAINT pk_collateral PRIMARY KEY ( "id" ),
-    CONSTRAINT fk_loan_collateral FOREIGN KEY ( loan_id ) REFERENCES api.loan ( "id" ),
-    CONSTRAINT fk_token_collateral FOREIGN KEY ( token_id ) REFERENCES api."token" ( "id" )
+    CONSTRAINT fk__loan_id__loan_id FOREIGN KEY ( loan_id ) REFERENCES api.loan ( "id" ),
+    CONSTRAINT fk__token_id__token_id FOREIGN KEY ( token_id ) REFERENCES api."token" ( "id" )
 );
 
-CREATE INDEX FK_72 ON api.collateral
+CREATE INDEX idx__collateral__loan_id ON api.collateral
     (
      loan_id
         );
 
-CREATE INDEX fk_token_collateral ON api.collateral
+CREATE INDEX idx__collateral__token_id ON api.collateral
     (
      token_id
         );
