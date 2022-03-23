@@ -26,7 +26,7 @@ const loansRoute = Router();
  * Get all loans
  */
 loansRoute.get(
-  '/loans',
+  '/',
   async (
     request: Request<
       never,
@@ -56,45 +56,15 @@ loansRoute.get(
   }
 );
 
-interface LoansParameters {
+export interface LoansParameters {
   pubkey: string;
 }
-/**
- * Get a list of loans for specific owner's public key (base58 encoded string)
- */
-loansRoute.get(
-  '/owners/:pubkey/loans',
-  async (request: Request<LoansParameters, LoanResponse[] | string, never, EnvironmentQueryParams>, response) => {
-    let env: ENV = request.query.env ?? 'mainnet-beta';
-
-    let user = tryGetPublicKeyFromString(request.params.pubkey);
-    if (!user) {
-      response.status(badRequest).send(`could not parse public key from: ${request.params.pubkey}`);
-      return;
-    }
-
-    let web3Client: Web3Client = new Web3Client(env);
-    const hubbleSdk = new Hubble(env, web3Client.connection);
-    const serumService = createSerumMarketService();
-
-    const responses = await Promise.all([
-      serumService.getMarkets(MINT_ADDRESSES, 'confirmed'),
-      hubbleSdk.getUserMetadatas(user),
-    ]);
-
-    const serumMarkets: Record<string, SerumMarket> = responses[0];
-    const userVaults: UserMetadata[] = responses[1];
-    const loans = getLoansFromUserVaults(userVaults, serumMarkets);
-
-    response.send(loans);
-  }
-);
 
 /**
  * Get history of a specific loan
  */
 loansRoute.get(
-  '/loans/:pubkey/history',
+  '/:pubkey/history',
   async (
     request: Request<LoansParameters, LoanHistoryResponse[] | string, never, EnvironmentQueryParams>,
     response
@@ -138,7 +108,7 @@ function loanToRedisKey(loan: PublicKey, env: ENV) {
  * Get a specific loan
  */
 loansRoute.get(
-  '/loans/:pubkey',
+  '/:pubkey',
   async (request: Request<LoansParameters, LoanResponse | string, never, EnvironmentQueryParams>, response) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
     let loanPubkey = tryGetPublicKeyFromString(request.params.pubkey);
@@ -211,7 +181,7 @@ function getLoanFromUserVault(
   return loan;
 }
 
-function getLoansFromUserVaults(
+export function getLoansFromUserVaults(
   userVaults: UserMetadata[] | UserMetadataWithJson[],
   serumMarkets: Record<string, SerumMarket>
 ) {
