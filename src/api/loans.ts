@@ -105,7 +105,7 @@ loansRoute.get(
       response.status(badRequest).send(`could not parse public key from: ${request.params.pubkey}`);
       return;
     }
-    const redis = new RedisProvider();
+    const redis = RedisProvider.getInstance();
     let history = await getCachedLoanHistory(env, loan, redis);
     if (!history) {
       const expireAt = new Date();

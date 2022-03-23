@@ -15,7 +15,7 @@ const redisUrl = `http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`;
  */
 const healthRoute = Router();
 healthRoute.get('/', async (request: Request<never, string, never, never>, response) => {
-  const redis = new RedisProvider();
+  const redis = RedisProvider.getInstance();
   redis.client
     .ping()
     .then(() => response.send(version))

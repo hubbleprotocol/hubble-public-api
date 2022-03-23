@@ -102,7 +102,7 @@ async function getQueryResults(params: DocumentClient.QueryInput) {
 
 async function getHistory(env: ENV, fromEpoch: number, toEpoch: number): Promise<{ status: number; body: any }> {
   try {
-    const redis = new RedisProvider();
+    const redis = RedisProvider.getInstance();
     let cachedMetrics = await getCachedHistoryMetrics(env, redis);
     if (!cachedMetrics) {
       cachedMetrics = await saveMetricsToCache(env, redis);

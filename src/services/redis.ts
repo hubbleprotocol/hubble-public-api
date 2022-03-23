@@ -2,9 +2,14 @@ import logger from './logger';
 import { getRedisEnvironmentVariables } from './environmentService';
 import Redis from 'ioredis';
 
-export = class RedisProvider {
+export default class RedisProvider {
+  private static instance: RedisProvider;
   private readonly _client: Redis.Redis;
+
   constructor() {
+    if (RedisProvider.instance) {
+      throw new Error('Error - use Singleton.getInstance()');
+    }
     const { REDIS_HOST, REDIS_PORT } = getRedisEnvironmentVariables();
     this._client = new Redis({
       host: REDIS_HOST,
@@ -19,7 +24,13 @@ export = class RedisProvider {
       logger.error({ message: 'redis client error', error: err, REDIS_HOST, REDIS_PORT })
     );
   }
+
+  static getInstance(): RedisProvider {
+    RedisProvider.instance = RedisProvider.instance || new RedisProvider();
+    return RedisProvider.instance;
+  }
+
   get client(): Redis.Redis {
     return this._client;
   }
-};
+}
