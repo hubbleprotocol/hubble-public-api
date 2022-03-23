@@ -9,8 +9,7 @@ import Router from 'express-promise-router';
 import { Request } from 'express';
 import Decimal from 'decimal.js';
 import logger from '../services/logger';
-import getRedisClient from '../services/redis';
-import { RedisClientType, RedisDefaultModules, RedisModules, RedisScripts } from 'redis';
+import RedisProvider from '../services/redis';
 
 const awsEnv = getAwsEnvironmentVariables();
 const dynamoDb = getDynamoDb(awsEnv.AWS_ACCESS_KEY_ID, awsEnv.AWS_SECRET_ACCESS_KEY, awsEnv.AWS_REGION);
@@ -43,10 +42,7 @@ historyRoute.get('/', async (request: Request<never, string, never, HistoryQuery
   }
 });
 
-async function saveMetricsToCache(
-  env: ENV,
-  redisClient: RedisClientType<RedisDefaultModules & RedisModules, RedisScripts>
-) {
+async function saveMetricsToCache(env: ENV, redisClient: RedisProvider) {
   logger.info({ message: 'saving all metrics to cache', env });
   // load up 1 year of history to cache
   const fromEpoch = new Date();
@@ -62,22 +58,15 @@ async function saveMetricsToCache(
   return queryResults;
 }
 
-async function getCachedHistoryMetrics(
-  env: ENV,
-  redisClient: RedisClientType<RedisDefaultModules & RedisModules, RedisScripts>
-) {
-  const history = await redisClient.get(`history-${env}`);
+async function getCachedHistoryMetrics(env: ENV, redisProvider: RedisProvider) {
+  const history = await redisProvider.client.get(`history-${env}`);
   if (history) {
     return JSON.parse(history) as MetricsSnapshot[];
   }
   return undefined;
 }
 
-async function setHistoryMetrics(
-  metrics: MetricsSnapshot[],
-  env: ENV,
-  redisClient: RedisClientType<RedisDefaultModules & RedisModules, RedisScripts>
-) {
+async function setHistoryMetrics(metrics: MetricsSnapshot[], env: ENV, redisProvider: RedisProvider) {
   // expire the metrics cache on the first minute of the next hour, we only keep hourly snapshots of history in dynamodb and refresh once per hour
   // for example, we save to cache at 10:15, hourly snapshot is saved to dynamodb at 11:00, we need to refresh the cache at 11:01
   const expireAt = new Date();
@@ -89,8 +78,8 @@ async function setHistoryMetrics(
 
   logger.info({ message: 'cache history metrics in redis', key, expireAt, redisUrl });
 
-  await redisClient.set(key, JSON.stringify(metrics));
-  await redisClient.expireAt(key, expireAt);
+  await redisProvider.client.set(key, JSON.stringify(metrics));
+  await redisProvider.client.expireat(key, expireAt.valueOf());
 }
 
 async function getQueryResults(params: DocumentClient.QueryInput) {
@@ -113,7 +102,7 @@ async function getQueryResults(params: DocumentClient.QueryInput) {
 
 async function getHistory(env: ENV, fromEpoch: number, toEpoch: number): Promise<{ status: number; body: any }> {
   try {
-    const redis = await getRedisClient(redisEnv.REDIS_HOST, redisEnv.REDIS_PORT);
+    const redis = RedisProvider.getInstance();
     let cachedMetrics = await getCachedHistoryMetrics(env, redis);
     if (!cachedMetrics) {
       cachedMetrics = await saveMetricsToCache(env, redis);

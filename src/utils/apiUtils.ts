@@ -4,6 +4,7 @@ import logger from '../services/logger';
 
 export const ok = 200;
 export const badRequest = 400;
+export const notFound = 404;
 export const unprocessable = 422;
 export const internalError = 500;
 export const badGateway = 502;

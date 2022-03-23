@@ -4,6 +4,17 @@ Hubble Public API is a TypeScript API (express) that serves public data of the H
 
 ## Development
 
+### Database
+
+We use Flyway for database migrations and PostgreSQL for data storage.
+
+Run migrations with docker:
+
+```shell
+# Run postgresql at localhost:5432 and apply flyway migrations
+docker-compose up db flyway
+```
+
 ### Local API Setup
 You will need to use [npm](https://www.npmjs.com/) to install the dependencies.
 
@@ -22,15 +33,15 @@ cp .env.example .env
 
 We also use Redis for caching historical results from AWS. You can use docker-compose to run an instance of Redis locally.
 
-Run the application and Redis by launching a development server:
+Run the API with npm (for debugging) and dependencies with docker-compose:
 
 ```shell
 cd hubble-public-api
-docker-compose up redis -d
+docker-compose up redis db flyway -d
 npm run start
 ```
 
-Run both API and Redis with docker-compose:
+Run everything with docker-compose:
 
 ```shell
 cd hubble-public-api
@@ -135,3 +146,60 @@ You may also filter by environment (`mainnet-beta`[default],`devnet`,`localnet`,
 ```http request
 GET https://api.hubbleprotocol.io/circulating-supply?env=devnet
 ```
+
+### API Version
+
+Get current version of the API.
+
+```http request
+GET https://api.hubbleprotocol.io/version
+```
+
+### Maintenance mode
+
+Get maintenance mode parameter that specifies if Hubble webapp/smart contracts are in maintenance mode.  
+
+```http request
+GET https://api.hubbleprotocol.io/maintenance-mode
+```
+
+### Borrowing version
+
+Get borrowing version parameter that specifies the current version of the borrowing market state (smart contracts).
+
+```http request
+GET https://api.hubbleprotocol.io/borrowing-version
+```
+
+### Loans
+
+You may use the `env` query param for all of the methods specified below (`mainnet-beta`[default],`devnet`,`localnet`,`testnet`).
+
+Get a list of all loans and their values from on-chain Hubble data:
+
+```http request
+GET https://api.hubbleprotocol.io/loans?env=mainnet-beta
+```
+
+Get specific loan data:
+
+```http request
+// GET https://api.hubbleprotocol.io/loans/:pubkey
+GET https://api.hubbleprotocol.io/loans/HrwbdQYwSnAyVpVHuGQ661HiNbWmGjDp5DdDR9YMw7Bu
+```
+
+Get a specific user's list of loans by specifying their public key: 
+
+```http request
+// GET https://api.hubbleprotocol.io/owners/:pubkey/loans
+GET https://api.hubbleprotocol.io/owners/HrwbdQYwSnAyVpVHuGQ661HiNbWmGjDp5DdDR9YMw7Bu/loans
+```
+
+Get specific loan's history data:
+
+```http request
+// GET https://api.hubbleprotocol.io/loans/:pubkey/history
+GET https://api.hubbleprotocol.io/loans/HrwbdQYwSnAyVpVHuGQ661HiNbWmGjDp5DdDR9YMw7Bu/history
+```
+
+

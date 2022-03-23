@@ -11,6 +11,7 @@ import healthRoute from './health';
 import maintenanceModeRoute from './maintenance-mode';
 import borrowingVersionRoute from './borrowing-version';
 import loansRoute from './loans';
+import ownersRoute from './owners';
 
 const routes = Router();
 
@@ -26,6 +27,7 @@ routesList.push({ endpoint: '/health', route: healthRoute });
 routesList.push({ endpoint: '/maintenance-mode', route: maintenanceModeRoute });
 routesList.push({ endpoint: '/borrowing-version', route: borrowingVersionRoute });
 routesList.push({ endpoint: '/loans', route: loansRoute });
+routesList.push({ endpoint: '/owners', route: ownersRoute });
 
 for (const route of routesList) {
   routes.use(route.endpoint, route.route);

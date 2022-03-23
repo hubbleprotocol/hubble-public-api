@@ -23,3 +23,28 @@ services:
     image: redis:6-alpine
     ports:
       - "6379:6379"
+  db:
+    image: postgres:14.2-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=hubbleUser
+      - POSTGRES_PASSWORD=hubblePass
+      - POSTGRES_DB=hubble-public-api-local
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+  flyway:
+    image: flyway/flyway:8.5.4-alpine
+#    build:
+#      context: migrations
+#      dockerfile: ./Dockerfile
+    command: migrate
+    depends_on:
+      - db
+    environment:
+      - POSTGRES_USER=hubbleUser
+      - POSTGRES_PASSWORD=hubblePass
+      - POSTGRES_URL=jdbc:postgresql://db:5432/hubble-public-api-local
+    volumes:
+      - ./migrations/sql:/flyway/sql
+      - ./migrations/conf:/flyway/conf

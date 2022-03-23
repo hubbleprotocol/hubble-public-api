@@ -4,6 +4,14 @@ service-base-chart:
     repository: hubbleprotocol/hubble-public-api
     tag: "latest"
 
+  initContainer:
+    image:
+      repository: hubbleprotocol/hubble-public-api-migrations
+      pullPolicy: Always
+      tag: "latest"
+    args:
+      - "migrate"
+
   containerPorts:
     - name: http
       containerPort: 80
@@ -39,18 +47,46 @@ service-base-chart:
         secretKeyRef:
           name: hubble-public-api-secret
           key: AWS_SECRET_ACCESS_KEY
+    - name: POSTGRES_USER
+      valueFrom:
+        secretKeyRef:
+          name: hubble-public-api-secret
+          key: POSTGRES_USER
+    - name: POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: hubble-public-api-secret
+          key: POSTGRES_PASSWORD
+    - name: POSTGRES_URL
+      valueFrom:
+        secretKeyRef:
+          name: hubble-public-api-secret
+          key: POSTGRES_URL
+    - name: POSTGRES_CONNECTION_STRING
+      valueFrom:
+        secretKeyRef:
+          name: hubble-public-api-secret
+          key: POSTGRES_CONNECTION_STRING
     - name: COIN_STATS_TABLE
       value: "coin-stats-dev"
     - name: REDIS_PORT
       value: "6379"
     - name: REDIS_HOST
       value: "redis-hubble-public-api-master"
+    - name: POSTGRES_POOL_MIN
+      value: "1"
 
   secrets:
     MAINNET_ENDPOINT:
     DEVNET_ENDPOINT:
     AWS_ACCESS_KEY_ID:
     AWS_SECRET_ACCESS_KEY:
+    # below are required for flyway migrations (connection string form differs slightly...):
+    POSTGRES_USER:
+    POSTGRES_PASSWORD:
+    POSTGRES_URL: # example: jdbc:postgresql://host:5432/dbName
+    # required for API:
+    POSTGRES_CONNECTION_STRING: # example: postgres://user:pass@host:5432/dbName
 
 redis:
   architecture: standalone
