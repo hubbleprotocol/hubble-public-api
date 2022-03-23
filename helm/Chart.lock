@@ -1,9 +1,9 @@
 dependencies:
 - name: service-base-chart
   repository: s3://helmrepository.build.hubbleprotocol.io
-  version: 0.0.1-SNAPSHOT-1646934211
+  version: 0.0.1-SNAPSHOT-1648036674
 - name: redis
   repository: https://charts.bitnami.com/bitnami
   version: 16.4.5
-digest: sha256:79f13d489233789c46998c8767b51d25779f4ee1d51d508d9ebc59fd843c6ff6
-generated: "2022-03-10T18:48:30.061021245+01:00"
+digest: sha256:11d0e3d826855a31545bce9658ec1d2a43db5ef41b27001078cf6c0dff768db8
+generated: "2022-03-23T13:02:35.18981599+01:00"

@@ -35,6 +35,9 @@ services:
       - ./postgres-data:/var/lib/postgresql/data
   flyway:
     image: flyway/flyway:8.5.4-alpine
+#    build:
+#      context: migrations
+#      dockerfile: ./Dockerfile
     command: migrate
     depends_on:
       - db

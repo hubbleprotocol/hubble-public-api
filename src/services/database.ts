@@ -11,10 +11,10 @@ import {
 import { PublicKey } from '@solana/web3.js';
 import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 import Decimal from 'decimal.js';
-import { groupBy } from '../../historian/src/utils/arrayUtils';
 import { CollateralTotals, SupportedToken } from '@hubbleprotocol/hubble-sdk';
 import { ENV } from './web3/client';
 import { getEnvOrDefault, getEnvOrThrowInProduction } from '../utils/envUtils';
+import { groupBy } from '../utils/arrayUtils';
 
 export const connectionString = getEnvOrThrowInProduction(
   'POSTGRES_CONNECTION_STRING',
