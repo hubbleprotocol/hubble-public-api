@@ -146,3 +146,60 @@ You may also filter by environment (`mainnet-beta`[default],`devnet`,`localnet`,
 ```http request
 GET https://api.hubbleprotocol.io/circulating-supply?env=devnet
 ```
+
+### API Version
+
+Get current version of the API.
+
+```http request
+GET https://api.hubbleprotocol.io/version
+```
+
+### Maintenance mode
+
+Get maintenance mode parameter that specifies if Hubble webapp/smart contracts are in maintenance mode.  
+
+```http request
+GET https://api.hubbleprotocol.io/maintenance-mode
+```
+
+### Borrowing version
+
+Get borrowing version parameter that specifies the current version of the borrowing market state (smart contracts).
+
+```http request
+GET https://api.hubbleprotocol.io/borrowing-version
+```
+
+### Loans
+
+You may use the `env` query param for all of the methods specified below (`mainnet-beta`[default],`devnet`,`localnet`,`testnet`).
+
+Get a list of all loans and their values from on-chain Hubble data:
+
+```http request
+GET https://api.hubbleprotocol.io/loans?env=mainnet-beta
+```
+
+Get specific loan data:
+
+```http request
+// GET https://api.hubbleprotocol.io/loans/:pubkey
+GET https://api.hubbleprotocol.io/loans/HrwbdQYwSnAyVpVHuGQ661HiNbWmGjDp5DdDR9YMw7Bu
+```
+
+Get a specific user's list of loans by specifying their public key: 
+
+```http request
+// GET https://api.hubbleprotocol.io/owners/:pubkey/loans
+GET https://api.hubbleprotocol.io/owners/HrwbdQYwSnAyVpVHuGQ661HiNbWmGjDp5DdDR9YMw7Bu/loans
+```
+
+Get specific loan's history data:
+
+```http request
+// GET https://api.hubbleprotocol.io/loans/:pubkey/history
+GET https://api.hubbleprotocol.io/loans/HrwbdQYwSnAyVpVHuGQ661HiNbWmGjDp5DdDR9YMw7Bu/history
+```
+
+
