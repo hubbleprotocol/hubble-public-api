@@ -41,7 +41,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: ./migrations
-          file: ./Dockerfile
+          file: ./migrations/Dockerfile
           tags: hubbleprotocol/hubble-public-api-migrations:latest,hubbleprotocol/hubble-public-api-migrations:${{ steps.set_versions.outputs.build_version }}
           push: true
           cache-from: type=gha
