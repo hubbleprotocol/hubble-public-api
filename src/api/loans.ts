@@ -15,6 +15,7 @@ import { LoanResponse, LoanResponseWithJson } from '../models/api/LoanResponse';
 import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 import { PublicKey } from '@solana/web3.js';
 import { getLoanHistory } from '../services/database';
+import RedisProvider from '../services/redis';
 
 /**
  * Get live Hubble on-chain loan data
@@ -104,10 +105,34 @@ loansRoute.get(
       response.status(badRequest).send(`could not parse public key from: ${request.params.pubkey}`);
       return;
     }
-    const history = await getLoanHistory(loan, env);
+    const redis = new RedisProvider();
+    let history = await getCachedLoanHistory(env, loan, redis);
+    if (!history) {
+      const expireAt = new Date();
+      expireAt.setHours(expireAt.getHours() + 1);
+      expireAt.setMinutes(1);
+      expireAt.setSeconds(0);
+      const key = loanToRedisKey(loan, env);
+      history = await getLoanHistory(loan, env);
+      await redis.client.set(key, JSON.stringify(history));
+      await redis.client.expireat(key, expireAt.valueOf());
+    }
+
     response.send(history);
   }
 );
+
+async function getCachedLoanHistory(env: ENV, loan: PublicKey, redisClient: RedisProvider) {
+  const loanHistory = await redisClient.client.get(loanToRedisKey(loan, env));
+  if (loanHistory) {
+    return JSON.parse(loanHistory) as LoanHistoryResponse[];
+  }
+  return undefined;
+}
+
+function loanToRedisKey(loan: PublicKey, env: ENV) {
+  return `loan-${env}-${loan.toString()}`;
+}
 
 /**
  * Get a specific loan

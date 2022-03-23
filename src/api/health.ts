@@ -4,7 +4,7 @@ import { getEnvOrThrow } from '../utils/envUtils';
 import { getRedisEnvironmentVariables } from '../services/environmentService';
 import { badGateway } from '../utils/apiUtils';
 import logger from '../services/logger';
-import getRedisClient from '../services/redis';
+import RedisProvider from '../services/redis';
 
 const version = getEnvOrThrow('API_VERSION');
 const redisEnv = getRedisEnvironmentVariables();
@@ -15,8 +15,8 @@ const redisUrl = `http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`;
  */
 const healthRoute = Router();
 healthRoute.get('/', async (request: Request<never, string, never, never>, response) => {
-  const redis = await getRedisClient(redisEnv.REDIS_HOST, redisEnv.REDIS_PORT);
-  redis
+  const redis = new RedisProvider();
+  redis.client
     .ping()
     .then(() => response.send(version))
     .catch((e) => {

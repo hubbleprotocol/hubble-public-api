@@ -1,38 +1,25 @@
-import { createClient, RedisClientType, RedisDefaultModules, RedisModules, RedisScripts } from 'redis';
 import logger from './logger';
+import { getRedisEnvironmentVariables } from './environmentService';
+import Redis from 'ioredis';
 
-let redisClient: RedisClientType<RedisDefaultModules & RedisModules, RedisScripts> | undefined;
-
-async function getClient(host: string, port: number) {
-  const client = createClient({
-    socket: {
-      host: host,
-      port: port,
+export = class RedisProvider {
+  private readonly _client: Redis.Redis;
+  constructor() {
+    const { REDIS_HOST, REDIS_PORT } = getRedisEnvironmentVariables();
+    this._client = new Redis({
+      host: REDIS_HOST,
+      port: REDIS_PORT,
       connectTimeout: 3000,
-      reconnectStrategy(retries: number) {
-        if (retries < 10) {
-          return 2500;
-        }
-        const err = 'could not reconnect to redis after 10 tries';
-        logger.error({ message: err, host, port });
-        throw Error(err);
-      },
-    },
-  });
-  client.on('connect', () => logger.info({ message: 'redis connecting', host, port }));
-  client.on('ready', () => logger.info({ message: 'redis connected successfully', host, port }));
-  client.on('reconnecting', () => logger.info({ message: 'redis reconnecting', host, port }));
-  client.on('error', (err) => logger.error({ message: 'redis client error', error: err }));
-  await client.connect();
-  return client;
-}
-
-export async function getRedisClient(host: string, port: number) {
-  if (redisClient !== undefined) {
-    return redisClient;
+    });
+    this._client.on('connect', () => logger.info({ message: 'redis connecting', REDIS_HOST, REDIS_PORT }));
+    this._client.on('ready', () => logger.info({ message: 'redis connected successfully', REDIS_HOST, REDIS_PORT }));
+    this._client.on('reconnecting', () => logger.info({ message: 'redis reconnecting', REDIS_HOST, REDIS_PORT }));
+    this._client.on('close', () => logger.info({ message: 'redis connection closed', REDIS_HOST, REDIS_PORT }));
+    this._client.on('error', (err) =>
+      logger.error({ message: 'redis client error', error: err, REDIS_HOST, REDIS_PORT })
+    );
   }
-  redisClient = await getClient(host, port);
-  return redisClient;
-}
-
-export default getRedisClient;
+  get client(): Redis.Redis {
+    return this._client;
+  }
+};

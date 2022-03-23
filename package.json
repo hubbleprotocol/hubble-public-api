@@ -30,6 +30,7 @@
     "@types/express": "^4.17.13",
     "@types/node": "^17.0.21",
     "@types/morgan": "^1.9.3",
+    "@types/ioredis": "^4.28.10",
     "dotenv": "^16.0.0",
     "nodemon": "^2.0.15",
     "prettier": "^2.5.1",
@@ -60,7 +61,7 @@
     "hdr-histogram-js": "^3.0.0",
     "jsbi": "^4.1.0",
     "morgan": "^1.10.0",
-    "redis": "^4.0.4",
+    "ioredis": "^4.28.5",
     "winston": "^3.6.0",
     "knex": "^1.0.4",
     "pg": "^8.7.3"
