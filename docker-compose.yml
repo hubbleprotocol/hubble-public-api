@@ -35,6 +35,7 @@ services:
       - ./postgres-data:/var/lib/postgresql/data
   flyway:
     image: flyway/flyway:8.5.4-alpine
+#    image: hubbleprotocol/hubble-public-api-migrations:latest
 #    build:
 #      context: migrations
 #      dockerfile: ./Dockerfile

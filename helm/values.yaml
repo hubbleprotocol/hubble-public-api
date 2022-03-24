@@ -4,13 +4,27 @@ service-base-chart:
     repository: hubbleprotocol/hubble-public-api
     tag: "latest"
 
-  initContainer:
-    image:
-      repository: hubbleprotocol/hubble-public-api-migrations
-      pullPolicy: Always
-      tag: "latest"
-    args:
-      - "migrate"
+  initContainers:
+    - name: hubble-public-api-migrations
+      image: hubbleprotocol/hubble-public-api-migrations:latest
+      imagePullPolicy: Always
+      args: ['migrate']
+      env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: hubble-public-api-secret
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hubble-public-api-secret
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_URL
+          valueFrom:
+            secretKeyRef:
+              name: hubble-public-api-secret
+              key: POSTGRES_URL
 
   containerPorts:
     - name: http
@@ -47,21 +61,6 @@ service-base-chart:
         secretKeyRef:
           name: hubble-public-api-secret
           key: AWS_SECRET_ACCESS_KEY
-    - name: POSTGRES_USER
-      valueFrom:
-        secretKeyRef:
-          name: hubble-public-api-secret
-          key: POSTGRES_USER
-    - name: POSTGRES_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: hubble-public-api-secret
-          key: POSTGRES_PASSWORD
-    - name: POSTGRES_URL
-      valueFrom:
-        secretKeyRef:
-          name: hubble-public-api-secret
-          key: POSTGRES_URL
     - name: POSTGRES_CONNECTION_STRING
       valueFrom:
         secretKeyRef:
