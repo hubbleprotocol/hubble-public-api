@@ -156,3 +156,14 @@ export const maxMinAvg = (arr: number[]) => {
   }
   return { max, min, avg: arr.length > 0 ? sum / arr.length : 0 };
 };
+
+export const median = (numbers: number[]) => {
+  const sorted = numbers.slice().sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+
+  if (sorted.length % 2 === 0) {
+    return (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+
+  return sorted[middle];
+};
