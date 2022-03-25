@@ -40,6 +40,10 @@ const getPostgresProvider = () => {
 
 let postgres = getPostgresProvider();
 
+export const testDbConnection = () => {
+  return postgres.raw('SELECT now()');
+};
+
 type JoinedLoanRow = {
   usdh_debt: string;
   total_collateral_value: string;

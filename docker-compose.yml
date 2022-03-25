@@ -6,9 +6,9 @@ services:
   hubble-public-api:
     build: .
     ports:
-      - "8080:8080"
+      - "8888:8888"
     environment:
-      - SERVER_PORT=8080
+      - SERVER_PORT=8888
       - MAINNET_ENDPOINT=${MAINNET_ENDPOINT}
       - DEVNET_ENDPOINT=${DEVNET_ENDPOINT}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -17,8 +17,10 @@ services:
       - API_VERSION=local-docker
       - REDIS_PORT=6379
       - REDIS_HOST=redis
+      - POSTGRES_CONNECTION_STRING=postgres://hubbleUser:hubblePass@db:5432/hubble-public-api-local
     depends_on:
       - redis
+      - db
   redis:
     image: redis:6-alpine
     ports:
@@ -43,9 +45,9 @@ services:
     depends_on:
       - db
     environment:
-      - POSTGRES_USER=hubbleUser
-      - POSTGRES_PASSWORD=hubblePass
-      - POSTGRES_URL=jdbc:postgresql://db:5432/hubble-public-api-local
+      - MIGRATION_POSTGRES_USER=hubbleUser
+      - MIGRATION_POSTGRES_PASSWORD=hubblePass
+      - MIGRATION_POSTGRES_URL=jdbc:postgresql://db:5432/hubble-public-api-local
     volumes:
       - ./migrations/sql:/flyway/sql
       - ./migrations/conf:/flyway/conf

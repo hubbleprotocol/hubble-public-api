@@ -10,21 +10,21 @@ service-base-chart:
       imagePullPolicy: Always
       args: ['migrate']
       env:
-        - name: POSTGRES_USER
+        - name: MIGRATION_POSTGRES_USER
           valueFrom:
             secretKeyRef:
               name: hubble-public-api-secret
-              key: POSTGRES_USER
-        - name: POSTGRES_PASSWORD
+              key: MIGRATION_POSTGRES_USER
+        - name: MIGRATION_POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: hubble-public-api-secret
-              key: POSTGRES_PASSWORD
-        - name: POSTGRES_URL
+              key: MIGRATION_POSTGRES_PASSWORD
+        - name: MIGRATION_POSTGRES_URL
           valueFrom:
             secretKeyRef:
               name: hubble-public-api-secret
-              key: POSTGRES_URL
+              key: MIGRATION_POSTGRES_URL
 
   containerPorts:
     - name: http
@@ -81,9 +81,9 @@ service-base-chart:
     AWS_ACCESS_KEY_ID:
     AWS_SECRET_ACCESS_KEY:
     # below are required for flyway migrations (connection string form differs slightly...):
-    POSTGRES_USER:
-    POSTGRES_PASSWORD:
-    POSTGRES_URL: # example: jdbc:postgresql://host:5432/dbName
+    MIGRATION_POSTGRES_USER:
+    MIGRATION_POSTGRES_PASSWORD:
+    MIGRATION_POSTGRES_URL: # example: jdbc:postgresql://host:5432/dbName
     # required for API:
     POSTGRES_CONNECTION_STRING: # example: postgres://user:pass@host:5432/dbName
 
