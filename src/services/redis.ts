@@ -21,7 +21,7 @@ export default class RedisProvider {
     this._client.on('reconnecting', () => logger.info({ message: 'redis reconnecting', REDIS_HOST, REDIS_PORT }));
     this._client.on('close', () => logger.info({ message: 'redis connection closed', REDIS_HOST, REDIS_PORT }));
     this._client.on('error', (err) =>
-      logger.error({ message: 'redis client error', error: err, REDIS_HOST, REDIS_PORT })
+      logger.warn({ message: 'redis client error', error: err, REDIS_HOST, REDIS_PORT })
     );
   }
 
