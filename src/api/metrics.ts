@@ -28,26 +28,47 @@ import {
   UserMetadata,
 } from '@hubbleprotocol/hubble-sdk';
 import { bin } from 'd3-array';
-
-type MetricsQueryParams = {
-  // Solana cluster name
-  env: ENV | undefined;
-  // Number of bins for distributions
-  bins: number | undefined;
-};
+import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
+import RedisProvider from '../services/redis';
 
 /**
  * Get live Hubble on-chain metrics data
  */
-const historyRoute = Router();
-historyRoute.get('/', async (request: Request<never, MetricsResponse, never, MetricsQueryParams>, response) => {
+const metricsRoute = Router();
+metricsRoute.get('/', async (request: Request<never, MetricsResponse, never, EnvironmentQueryParams>, response) => {
   let env: ENV = request.query.env ?? 'mainnet-beta';
-  let bins = request.query.bins ?? 20;
-  const metrics = await getMetrics(env, bins);
+  const bins = 20;
+  let metrics = await getCachedMetrics(env);
+  if (!metrics) {
+    metrics = await getMetrics(env, bins);
+    await saveMetricsToCache(env, metrics);
+  }
   response.send(metrics);
 });
 
-export default historyRoute;
+export default metricsRoute;
+
+async function saveMetricsToCache(env: ENV, metrics: MetricsResponse) {
+  const redis = RedisProvider.getInstance().client;
+  const key = getMetricsRedisKey(env);
+  await redis.set(key, JSON.stringify(metrics));
+  const expireInSeconds = 60;
+  await redis.expire(key, expireInSeconds);
+}
+
+async function getCachedMetrics(env: ENV) {
+  const redis = RedisProvider.getInstance().client;
+  const key = getMetricsRedisKey(env);
+  const metrics = await redis.get(key);
+  if (metrics) {
+    return JSON.parse(metrics) as MetricsResponse;
+  }
+  return undefined;
+}
+
+function getMetricsRedisKey(env: ENV) {
+  return `metrics-${env}`;
+}
 
 async function getMetrics(env: ENV, numberOfBins: number): Promise<MetricsResponse> {
   let web3Client: Web3Client = new Web3Client(env);
@@ -85,6 +106,8 @@ async function getMetrics(env: ENV, numberOfBins: number): Promise<MetricsRespon
       saberService.getStats(),
       jupiterService.getStats(),
     ]);
+
+    const timestamp = new Date().valueOf();
 
     const borrowingMarketState: BorrowingMarketState = responses[0];
     const markets = responses[1];
@@ -226,6 +249,7 @@ async function getMetrics(env: ENV, numberOfBins: number): Promise<MetricsRespon
       },
       circulatingSupplyValue: circulatingSupply.mul(hbbPrice),
       totalValueLocked: totalHbbStaked.mul(hbbPrice).plus(collateral.total).plus(totalUsdh),
+      timestamp,
     };
   } finally {
     loansHistogram.destroy();

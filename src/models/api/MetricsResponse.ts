@@ -26,4 +26,7 @@ export type MetricsResponse = {
 
   // Total Value Locked (TVL) => total staked HBB + total collateral + total USDH
   totalValueLocked: Decimal;
+
+  // Epoch timestamp of when these metrics have been fetched (we keep them in cache for 60s)
+  timestamp: number;
 };
