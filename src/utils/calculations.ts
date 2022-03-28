@@ -167,3 +167,7 @@ export const median = (numbers: number[]) => {
 
   return sorted[middle];
 };
+
+export const dateToUnixSeconds = (date: Date) => {
+  return Math.round(date.valueOf() / 1000);
+};

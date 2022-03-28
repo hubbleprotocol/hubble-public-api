@@ -10,6 +10,7 @@ import { Request } from 'express';
 import Decimal from 'decimal.js';
 import logger from '../services/logger';
 import RedisProvider from '../services/redis';
+import { dateToUnixSeconds } from '../utils/calculations';
 
 const awsEnv = getAwsEnvironmentVariables();
 const dynamoDb = getDynamoDb(awsEnv.AWS_ACCESS_KEY_ID, awsEnv.AWS_SECRET_ACCESS_KEY, awsEnv.AWS_REGION);
@@ -79,7 +80,7 @@ async function setHistoryMetrics(metrics: MetricsSnapshot[], env: ENV, redisProv
   logger.info({ message: 'cache history metrics in redis', key, expireAt, redisUrl });
 
   await redisProvider.client.set(key, JSON.stringify(metrics));
-  await redisProvider.client.expireat(key, expireAt.valueOf());
+  await redisProvider.client.expireat(key, dateToUnixSeconds(expireAt));
 }
 
 async function getQueryResults(params: DocumentClient.QueryInput) {

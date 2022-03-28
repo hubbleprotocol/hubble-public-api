@@ -7,7 +7,7 @@ import { tryGetPublicKeyFromString } from '../utils/tokenUtils';
 import { MINT_ADDRESSES, SUPPORTED_TOKENS } from '../constants/tokens';
 import { Hubble, UserMetadata, UserMetadataWithJson } from '@hubbleprotocol/hubble-sdk';
 import Decimal from 'decimal.js';
-import { calculateCollateralRatio, getTokenCollateral } from '../utils/calculations';
+import { calculateCollateralRatio, dateToUnixSeconds, getTokenCollateral } from '../utils/calculations';
 import { STABLECOIN_DECIMALS } from '../constants/math';
 import { createSerumMarketService } from '../services/serum/SerumMarketService';
 import { SerumMarket } from '../models/SerumMarket';
@@ -85,7 +85,7 @@ loansRoute.get(
       const key = loanToRedisKey(loan, env);
       history = await getLoanHistory(loan, env);
       await redis.client.set(key, JSON.stringify(history));
-      await redis.client.expireat(key, expireAt.valueOf());
+      await redis.client.expireat(key, dateToUnixSeconds(expireAt));
     }
 
     response.send(history);
