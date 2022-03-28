@@ -16,6 +16,7 @@ import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 import { PublicKey } from '@solana/web3.js';
 import { getLoanHistory } from '../services/database';
 import RedisProvider from '../services/redis';
+import { HistoryQueryParams } from './history';
 
 /**
  * Get live Hubble on-chain loan data
@@ -65,16 +66,25 @@ export interface LoansParameters {
  */
 loansRoute.get(
   '/:pubkey/history',
-  async (
-    request: Request<LoansParameters, LoanHistoryResponse[] | string, never, EnvironmentQueryParams>,
-    response
-  ) => {
+  async (request: Request<LoansParameters, LoanHistoryResponse[] | string, never, HistoryQueryParams>, response) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
     let loan = tryGetPublicKeyFromString(request.params.pubkey);
     if (!loan) {
       response.status(badRequest).send(`could not parse public key from: ${request.params.pubkey}`);
       return;
     }
+
+    let from = new Date();
+    from.setMonth(from.getMonth() - 1); //by default only return historical data for the past month
+    let fromEpoch: number = request.query.from ? +request.query.from : from.valueOf();
+    let toEpoch: number = request.query.to ? +request.query.to : new Date().valueOf();
+    if (fromEpoch > toEpoch) {
+      response
+        .status(badRequest)
+        .send(`Start date (epoch: ${fromEpoch}) can not be bigger than end date (epoch: ${toEpoch})`);
+      return;
+    }
+
     const redis = RedisProvider.getInstance();
     let history = await getCachedLoanHistory(env, loan, redis);
     if (!history) {
@@ -88,7 +98,8 @@ loansRoute.get(
       await redis.client.expireat(key, dateToUnixSeconds(expireAt));
     }
 
-    response.send(history);
+    const filtered = history.filter((x) => x.epoch >= fromEpoch && x.epoch <= toEpoch);
+    response.send(filtered);
   }
 );
 

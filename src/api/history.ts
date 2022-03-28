@@ -22,7 +22,7 @@ const redisUrl = `http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`;
  * Get Hubble on-chain historical metrics
  */
 const historyRoute = Router();
-type HistoryQueryParams = {
+export type HistoryQueryParams = {
   env: ENV | undefined;
   from: string | undefined;
   to: string | undefined;
