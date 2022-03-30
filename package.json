@@ -41,7 +41,7 @@
   "dependencies": {
     "@hubbleprotocol/hubble-config": "^1.0.25",
     "@hubbleprotocol/hubble-idl": "^1.0.25",
-    "@hubbleprotocol/hubble-sdk": "^1.0.31",
+    "@hubbleprotocol/hubble-sdk": "^1.0.32",
     "@hubbleprotocol/hubble-db": "^1.0.30",
     "@jup-ag/core": "^1.0.0-beta.16",
     "@orca-so/sdk": "^1.2.23",
