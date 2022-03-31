@@ -40,7 +40,7 @@ CREATE TABLE api.stability_provider
     deposited_stablecoin        numeric                  NOT NULL,
     created_on                  timestamp with time zone NOT NULL,
     raw_json                    jsonb                    NOT NULL,
-    CONSTRAINT loan_PK PRIMARY KEY ("id"),
+    CONSTRAINT pk_stability_provider PRIMARY KEY ("id"),
     CONSTRAINT fk__owner_id_owner_id FOREIGN KEY (owner_id) REFERENCES api.owner ("id")
 );
 
