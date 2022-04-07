@@ -51,6 +51,6 @@ CREATE TABLE api.stability_provider
 );
 
 CREATE INDEX idx__stability_provider__owner_id ON api.stability_provider
-    (
-     owner_id
-        );
+(
+ owner_id
+    );
