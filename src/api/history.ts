@@ -101,7 +101,11 @@ async function getQueryResults(params: DocumentClient.QueryInput) {
   return results;
 }
 
-async function getHistory(env: ENV, fromEpoch: number, toEpoch: number): Promise<{ status: number; body: any }> {
+export async function getHistory(
+  env: ENV,
+  fromEpoch: number,
+  toEpoch: number
+): Promise<{ status: number; body: any; metrics: MetricsSnapshot[] }> {
   try {
     const redis = RedisProvider.getInstance();
     let cachedMetrics = await getCachedHistoryMetrics(env, redis);
@@ -113,10 +117,10 @@ async function getHistory(env: ENV, fromEpoch: number, toEpoch: number): Promise
 
     // 3. every hour at 00 minutes we schedule with cron expression and call the metrics function and save it alongside existing redis cache by appending it to the history and updating endDate
 
-    return { status: ok, body: metricsToHistory(filteredMetrics, fromEpoch, toEpoch) };
+    return { status: ok, body: metricsToHistory(filteredMetrics, fromEpoch, toEpoch), metrics: filteredMetrics };
   } catch (e) {
     logger.error(e);
-    return { status: internalError, body: e instanceof Error ? e.message : e };
+    return { status: internalError, body: e instanceof Error ? e.message : e, metrics: [] };
   }
 }
 
