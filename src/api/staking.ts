@@ -1,5 +1,5 @@
 import Router from 'express-promise-router';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { internalError, parseFromQueryParams, unprocessable } from '../utils/apiUtils';
 import { Hubble } from '@hubbleprotocol/hubble-sdk';
@@ -11,8 +11,8 @@ import { getMetrics } from './metrics';
 import GlobalConfig from '@hubbleprotocol/hubble-sdk/dist/models/GlobalConfig';
 import { MetricsResponse } from '../models/api/MetricsResponse';
 import { HBB_DECIMALS } from '../constants/math';
-
-//TODO: save to cache with 1h expiry
+import { ENV, Web3Client } from '../services/web3/client';
+import RedisProvider from '../services/redis';
 
 /**
  * Get staking stats of HBB and USDH (APR+APY)
@@ -23,46 +23,90 @@ stakingRoute.get(
   async (request: Request<never, StakingResponse[] | string, never, EnvironmentQueryParams>, response) => {
     const [web3Client, env, error] = parseFromQueryParams(request.query);
     if (web3Client && env) {
-      const hubbleSdk = new Hubble(env, web3Client.connection);
-      const globalConfig = await hubbleSdk.getGlobalConfig();
-      const metrics = await getMetrics(env);
-
-      const from = new Date();
-      from.setDate(from.getDate() - 7);
-      from.setMinutes(0);
-      from.setSeconds(0);
-
-      const to = new Date(from);
-      to.setMinutes(5);
-
-      const history = await getHistory(env, from.valueOf(), to.valueOf());
-      if (history.metrics.length === 0) {
-        logger.error(history.body);
-        response.status(internalError).send('Could not get historical treasury vault data');
-        return;
+      let staking = await getCachedStaking(env);
+      if (staking) {
+        response.send(staking);
+      } else {
+        staking = await fetchStaking(env, web3Client, response);
+        if (staking) {
+          await saveStakingToCache(env, staking);
+          response.send(staking);
+        }
       }
-      const treasuryWeekAgo = history.metrics[0].metrics.borrowing.treasury;
-      const hbbApr = calculateHbbApr(
-        new Decimal(metrics.borrowing.treasury),
-        treasuryWeekAgo,
-        new Decimal(metrics.hbb.staked),
-        new Decimal(metrics.hbb.price)
-      );
-      const usdhApr = calculateUsdhApr(globalConfig, metrics);
-      response.send([
-        {
-          name: 'HBB',
-          apr: hbbApr,
-          apy: aprToApy(hbbApr),
-          tvl: new Decimal(metrics.hbb.staked).mul(new Decimal(metrics.hbb.price)),
-        },
-        { name: 'USDH', apr: usdhApr, apy: aprToApy(usdhApr), tvl: metrics.usdh.stabilityPool },
-      ]);
     } else {
       response.status(unprocessable).send(error);
     }
   }
 );
+
+async function fetchStaking(
+  env: ENV,
+  web3Client: Web3Client,
+  response: Response
+): Promise<StakingResponse[] | undefined> {
+  const hubbleSdk = new Hubble(env, web3Client.connection);
+
+  const from = new Date();
+  from.setDate(from.getDate() - 7);
+  from.setMinutes(0);
+  from.setSeconds(0);
+  const to = new Date(from);
+  to.setMinutes(5);
+
+  const responses = await Promise.all([
+    hubbleSdk.getGlobalConfig(),
+    getMetrics(env),
+    getHistory(env, from.valueOf(), to.valueOf()),
+  ]);
+
+  const globalConfig = responses[0];
+  const metrics = responses[1];
+  const history = responses[2];
+
+  if (history.metrics.length === 0) {
+    logger.error(history.body);
+    response.status(internalError).send('Could not get historical treasury vault data');
+    return;
+  }
+  const treasuryWeekAgo = history.metrics[0].metrics.borrowing.treasury;
+  const hbbApr = calculateHbbApr(
+    new Decimal(metrics.borrowing.treasury),
+    treasuryWeekAgo,
+    new Decimal(metrics.hbb.staked),
+    new Decimal(metrics.hbb.price)
+  );
+  const usdhApr = calculateUsdhApr(globalConfig, metrics);
+  return [
+    {
+      name: 'HBB',
+      apr: hbbApr,
+      apy: aprToApy(hbbApr),
+      tvl: new Decimal(metrics.hbb.staked).mul(new Decimal(metrics.hbb.price)),
+    },
+    { name: 'USDH', apr: usdhApr, apy: aprToApy(usdhApr), tvl: metrics.usdh.stabilityPool },
+  ];
+}
+
+async function saveStakingToCache(env: ENV, staking: StakingResponse[]) {
+  const redis = RedisProvider.getInstance().client;
+  const key = getStakingRedisKey(env);
+  const expireInSeconds = 60 * 60;
+  await redis.multi().set(key, JSON.stringify(staking)).expire(key, expireInSeconds).exec();
+}
+
+async function getCachedStaking(env: ENV) {
+  const redis = RedisProvider.getInstance().client;
+  const key = getStakingRedisKey(env);
+  const staking = await redis.get(key);
+  if (staking) {
+    return JSON.parse(staking) as StakingResponse[];
+  }
+  return undefined;
+}
+
+function getStakingRedisKey(env: ENV) {
+  return `staking-${env}`;
+}
 
 /**
  * Calculate HBB APR. How we calculate HBB APR:

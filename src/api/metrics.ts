@@ -56,9 +56,8 @@ export async function getMetrics(env: ENV) {
 async function saveMetricsToCache(env: ENV, metrics: MetricsResponse) {
   const redis = RedisProvider.getInstance().client;
   const key = getMetricsRedisKey(env);
-  await redis.set(key, JSON.stringify(metrics));
   const expireInSeconds = 60;
-  await redis.expire(key, expireInSeconds);
+  await redis.multi().set(key, JSON.stringify(metrics)).expire(key, expireInSeconds).exec();
 }
 
 async function getCachedMetrics(env: ENV) {
