@@ -90,7 +90,7 @@ async function fetchStaking(
 async function saveStakingToCache(env: ENV, staking: StakingResponse[]) {
   const redis = RedisProvider.getInstance().client;
   const key = getStakingRedisKey(env);
-  const expireInSeconds = 60 * 60;
+  const expireInSeconds = 5 * 60;
   await redis.multi().set(key, JSON.stringify(staking)).expire(key, expireInSeconds).exec();
 }
 
