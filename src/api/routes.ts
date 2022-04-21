@@ -12,7 +12,7 @@ import maintenanceModeRoute from './maintenance-mode';
 import borrowingVersionRoute from './borrowing-version';
 import loansRoute from './loans';
 import ownersRoute from './owners';
-import aprRoute from './apr';
+import stakingRoute from './staking';
 
 const routes = Router();
 
@@ -29,7 +29,7 @@ routesList.push({ endpoint: '/maintenance-mode', route: maintenanceModeRoute });
 routesList.push({ endpoint: '/borrowing-version', route: borrowingVersionRoute });
 routesList.push({ endpoint: '/loans', route: loansRoute });
 routesList.push({ endpoint: '/owners', route: ownersRoute });
-routesList.push({ endpoint: '/apr', route: aprRoute });
+routesList.push({ endpoint: '/staking', route: stakingRoute });
 
 for (const route of routesList) {
   routes.use(route.endpoint, route.route);

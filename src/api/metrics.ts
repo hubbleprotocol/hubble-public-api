@@ -37,16 +37,21 @@ import RedisProvider from '../services/redis';
 const metricsRoute = Router();
 metricsRoute.get('/', async (request: Request<never, MetricsResponse, never, EnvironmentQueryParams>, response) => {
   let env: ENV = request.query.env ?? 'mainnet-beta';
-  const bins = 20;
-  let metrics = await getCachedMetrics(env);
-  if (!metrics) {
-    metrics = await getMetrics(env, bins);
-    await saveMetricsToCache(env, metrics);
-  }
+  let metrics = await getMetrics(env);
   response.send(metrics);
 });
 
 export default metricsRoute;
+
+export async function getMetrics(env: ENV) {
+  const bins = 20;
+  let metrics = await getCachedMetrics(env);
+  if (!metrics) {
+    metrics = await fetchMetrics(env, bins);
+    await saveMetricsToCache(env, metrics);
+  }
+  return metrics;
+}
 
 async function saveMetricsToCache(env: ENV, metrics: MetricsResponse) {
   const redis = RedisProvider.getInstance().client;
@@ -70,7 +75,7 @@ function getMetricsRedisKey(env: ENV) {
   return `metrics-${env}`;
 }
 
-async function getMetrics(env: ENV, numberOfBins: number): Promise<MetricsResponse> {
+async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResponse> {
   let web3Client: Web3Client = new Web3Client(env);
 
   //TODO: build own histogram implementation that supports Decimal instead of number..
