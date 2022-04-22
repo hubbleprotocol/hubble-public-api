@@ -43,8 +43,8 @@ historyRoute.get('/', async (request: Request<never, string, never, HistoryQuery
   }
 });
 
-async function saveMetricsToCache(env: ENV, redisClient: RedisProvider) {
-  logger.info({ message: 'saving all metrics to cache', env });
+async function saveHistoryMetricsToCache(env: ENV, redisClient: RedisProvider) {
+  logger.info({ message: 'saving all history metrics to cache', env });
   // load up 1 year of history to cache
   const fromEpoch = new Date();
   fromEpoch.setFullYear(fromEpoch.getFullYear() - 1);
@@ -79,8 +79,11 @@ async function setHistoryMetrics(metrics: MetricsSnapshot[], env: ENV, redisProv
 
   logger.info({ message: 'cache history metrics in redis', key, expireAt, redisUrl });
 
-  await redisProvider.client.set(key, JSON.stringify(metrics));
-  await redisProvider.client.expireat(key, dateToUnixSeconds(expireAt));
+  await redisProvider.client
+    .multi()
+    .set(key, JSON.stringify(metrics))
+    .expireat(key, dateToUnixSeconds(expireAt))
+    .exec();
 }
 
 async function getQueryResults(params: DocumentClient.QueryInput) {
@@ -101,22 +104,26 @@ async function getQueryResults(params: DocumentClient.QueryInput) {
   return results;
 }
 
-async function getHistory(env: ENV, fromEpoch: number, toEpoch: number): Promise<{ status: number; body: any }> {
+export async function getHistory(
+  env: ENV,
+  fromEpoch: number,
+  toEpoch: number
+): Promise<{ status: number; body: any; metrics: MetricsSnapshot[] }> {
   try {
     const redis = RedisProvider.getInstance();
     let cachedMetrics = await getCachedHistoryMetrics(env, redis);
     if (!cachedMetrics) {
-      cachedMetrics = await saveMetricsToCache(env, redis);
+      cachedMetrics = await saveHistoryMetricsToCache(env, redis);
     }
 
     const filteredMetrics = cachedMetrics.filter((x) => x.createdOn >= fromEpoch && x.createdOn <= toEpoch);
 
     // 3. every hour at 00 minutes we schedule with cron expression and call the metrics function and save it alongside existing redis cache by appending it to the history and updating endDate
 
-    return { status: ok, body: metricsToHistory(filteredMetrics, fromEpoch, toEpoch) };
+    return { status: ok, body: metricsToHistory(filteredMetrics, fromEpoch, toEpoch), metrics: filteredMetrics };
   } catch (e) {
     logger.error(e);
-    return { status: internalError, body: e instanceof Error ? e.message : e };
+    return { status: internalError, body: e instanceof Error ? e.message : e, metrics: [] };
   }
 }
 
