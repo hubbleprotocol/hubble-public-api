@@ -42,6 +42,9 @@ stakingRoute.get(
   }
 );
 
+/**
+ * Get all HBB stakers
+ */
 stakingRoute.get(
   '/hbb/users',
   async (request: Request<never, StakingUserResponse[] | string, never, EnvironmentQueryParams>, response) => {
