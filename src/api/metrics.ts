@@ -29,7 +29,7 @@ import {
 } from '@hubbleprotocol/hubble-sdk';
 import { bin } from 'd3-array';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
-import RedisProvider from '../services/redis';
+import RedisProvider from '../services/redis/redis';
 
 /**
  * Get live Hubble on-chain metrics data

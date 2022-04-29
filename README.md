@@ -202,4 +202,24 @@ Get specific loan's history data:
 GET https://api.hubbleprotocol.io/loans/HrwbdQYwSnAyVpVHuGQ661HiNbWmGjDp5DdDR9YMw7Bu/history
 ```
 
+### Staking
 
+You may use the `env` query param for all of the methods specified below (`mainnet-beta`[default],`devnet`,`localnet`,`testnet`).
+
+Get HBB and USDH staking stats (APR, APY):
+
+```http request
+GET https://api.hubbleprotocol.io/staking
+```
+
+Get all HBB stakers (grouped by owner public key):
+
+```http request
+GET https://api.hubbleprotocol.io/staking/hbb/users
+```
+
+Get all USDH stakers (grouped by owner public key):
+
+```http request
+GET https://api.hubbleprotocol.io/staking/usdh/users
+```

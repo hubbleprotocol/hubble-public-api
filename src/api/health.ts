@@ -4,7 +4,7 @@ import { getEnvOrThrow } from '../utils/envUtils';
 import { getRedisEnvironmentVariables } from '../services/environmentService';
 import { badGateway } from '../utils/apiUtils';
 import logger from '../services/logger';
-import RedisProvider from '../services/redis';
+import RedisProvider from '../services/redis/redis';
 import { testDbConnection } from '../services/database';
 
 const version = getEnvOrThrow('API_VERSION');

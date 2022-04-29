@@ -15,7 +15,7 @@ import { LoanResponse, LoanResponseWithJson } from '../models/api/LoanResponse';
 import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 import { PublicKey } from '@solana/web3.js';
 import { getLoanHistory } from '../services/database';
-import RedisProvider from '../services/redis';
+import RedisProvider from '../services/redis/redis';
 import { HistoryQueryParams } from './history';
 
 /**

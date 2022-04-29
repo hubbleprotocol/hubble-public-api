@@ -1,5 +1,5 @@
-import logger from './logger';
-import { getRedisEnvironmentVariables } from './environmentService';
+import logger from '../logger';
+import { getRedisEnvironmentVariables } from '../environmentService';
 import Redis from 'ioredis';
 
 export default class RedisProvider {
@@ -32,5 +32,18 @@ export default class RedisProvider {
 
   get client(): Redis.Redis {
     return this._client;
+  }
+
+  async getAndParseKey<T>(key: string): Promise<T | undefined> {
+    const value = await this._client.get(key);
+    if (value) {
+      return JSON.parse(value) as T;
+    }
+    return undefined;
+  }
+
+  saveWithExpiry<T>(key: string, value: T, expireInSeconds: number) {
+    logger.info({ message: 'saving key to redis', key, expireInSeconds });
+    return this._client.multi().set(key, JSON.stringify(value)).expire(key, expireInSeconds).exec();
   }
 }
