@@ -9,7 +9,7 @@ import Router from 'express-promise-router';
 import { Request } from 'express';
 import Decimal from 'decimal.js';
 import logger from '../services/logger';
-import RedisProvider from '../services/redis';
+import RedisProvider from '../services/redis/redis';
 import { dateToUnixSeconds } from '../utils/calculations';
 
 const awsEnv = getAwsEnvironmentVariables();
