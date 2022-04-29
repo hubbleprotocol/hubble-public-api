@@ -13,6 +13,9 @@ import { MetricsResponse } from '../models/api/MetricsResponse';
 import { HBB_DECIMALS } from '../constants/math';
 import { ENV, Web3Client } from '../services/web3/client';
 import RedisProvider from '../services/redis';
+import { StakingUserResponse } from '../models/api/StakingUserResponse';
+import { groupBy } from '../utils/arrayUtils';
+import { PublicKey } from '@solana/web3.js';
 
 /**
  * Get staking stats of HBB and USDH (APR+APY)
@@ -38,6 +41,37 @@ stakingRoute.get(
     }
   }
 );
+
+stakingRoute.get(
+  '/hbb/users',
+  async (request: Request<never, StakingUserResponse[] | string, never, EnvironmentQueryParams>, response) => {
+    const [web3Client, env, error] = parseFromQueryParams(request.query);
+    if (web3Client && env) {
+      let stakingUsers = await getCachedHbbStakers(env);
+      if (!stakingUsers) {
+        stakingUsers = await fetchHbbStakers(env, web3Client);
+        await saveHbbStakersToCache(env, stakingUsers);
+      }
+      response.send(stakingUsers);
+    } else {
+      response.status(unprocessable).send(error);
+    }
+  }
+);
+
+async function fetchHbbStakers(env: ENV, web3Client: Web3Client) {
+  const stakingUsers: StakingUserResponse[] = [];
+  const hubbleSdk = new Hubble(env, web3Client.connection);
+  const userStakingStates = await hubbleSdk.getUserStakingStates();
+  for (const [user, stakingStates] of groupBy(userStakingStates, (x) => x.owner.toBase58())) {
+    let totalStaked = new Decimal(0);
+    for (const stakingState of stakingStates) {
+      totalStaked = totalStaked.add(stakingState.userStake.dividedBy(HBB_DECIMALS));
+    }
+    stakingUsers.push({ user: new PublicKey(user), staked: totalStaked });
+  }
+  return stakingUsers;
+}
 
 async function fetchStaking(
   env: ENV,
@@ -104,8 +138,29 @@ async function getCachedStaking(env: ENV) {
   return undefined;
 }
 
+async function saveHbbStakersToCache(env: ENV, stakers: StakingUserResponse[]) {
+  const redis = RedisProvider.getInstance().client;
+  const key = getHbbStakersRedisKey(env);
+  const expireInSeconds = 5 * 60;
+  await redis.multi().set(key, JSON.stringify(stakers)).expire(key, expireInSeconds).exec();
+}
+
+async function getCachedHbbStakers(env: ENV) {
+  const redis = RedisProvider.getInstance().client;
+  const key = getHbbStakersRedisKey(env);
+  const stakers = await redis.get(key);
+  if (stakers) {
+    return JSON.parse(stakers) as StakingUserResponse[];
+  }
+  return undefined;
+}
+
 function getStakingRedisKey(env: ENV) {
   return `staking-${env}`;
+}
+
+function getHbbStakersRedisKey(env: ENV) {
+  return `stakers-hbb-${env}`;
 }
 
 /**
