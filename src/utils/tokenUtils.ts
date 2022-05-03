@@ -9,6 +9,8 @@ import {
   LAMPORTS_PER_MSOL,
 } from '../constants/math';
 import Decimal from 'decimal.js';
+import { TokenWithPubkey } from '../services/price/PythPriceService';
+import { HubbleConfig } from '@hubbleprotocol/hubble-config';
 
 export const lamportsToCollateral = (lamports: Decimal, token: SupportedToken): Decimal => {
   let factor = LAMPORTS_PER_SOL;
@@ -55,4 +57,16 @@ export const tryGetPublicKeyFromString = (pubkey: string): PublicKey | undefined
   } catch {
     return undefined;
   }
+};
+
+export const getPythTokens = (config: HubbleConfig): TokenWithPubkey[] => {
+  return [
+    { token: 'BTC', pubkey: config.borrowing.accounts.pyth?.btcPriceInfo! },
+    { token: 'mSOL', pubkey: config.borrowing.accounts.pyth?.msolPriceInfo! },
+    { token: 'SRM', pubkey: config.borrowing.accounts.pyth?.srmPriceInfo! },
+    { token: 'RAY', pubkey: config.borrowing.accounts.pyth?.rayPriceInfo! },
+    { token: 'SOL', pubkey: config.borrowing.accounts.pyth?.solPriceInfo! },
+    { token: 'FTT', pubkey: config.borrowing.accounts.pyth?.fttPriceInfo! },
+    { token: 'ETH', pubkey: config.borrowing.accounts.pyth?.ethPriceInfo! },
+  ];
 };

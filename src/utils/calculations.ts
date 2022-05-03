@@ -1,15 +1,4 @@
-import { SerumMarket } from '../models/SerumMarket';
-import {
-  BTC_MINT,
-  ETH_MINT,
-  FTT_MINT,
-  MSOL_MINT,
-  RAY_MINT,
-  SOL_MINT,
-  SRM_MINT,
-  SUPPORTED_TOKENS,
-  SupportedToken,
-} from '../constants/tokens';
+import { SUPPORTED_TOKENS, SupportedToken } from '../constants/tokens';
 import { lamportsToCollateral } from './tokenUtils';
 import { SCALE_FACTOR } from '../constants/math';
 import Decimal from 'decimal.js';
@@ -21,85 +10,86 @@ import {
   StabilityProviderState,
 } from '@hubbleprotocol/hubble-sdk';
 import logger from '../services/logger';
+import { PythPrice } from '../services/price/PythPriceService';
 
 export const getTokenCollateral = (
   token: SupportedToken,
   deposited: CollateralAmounts,
   inactive: CollateralAmounts,
-  markets: Record<string, SerumMarket>
+  prices: PythPrice[]
 ): CollateralTotals => {
   switch (token) {
     case 'BTC':
       return {
         deposited: lamportsToCollateral(deposited.btc, token),
         inactive: lamportsToCollateral(inactive.btc, token),
-        price: markets[BTC_MINT].midPrice!,
+        price: getPythPriceForToken(token, prices),
         token: token,
       };
     case 'SRM':
       return {
         deposited: lamportsToCollateral(deposited.srm, token),
         inactive: lamportsToCollateral(inactive.srm, token),
-        price: markets[SRM_MINT].midPrice!,
+        price: getPythPriceForToken(token, prices),
         token: token,
       };
     case 'ETH':
       return {
         deposited: lamportsToCollateral(deposited.eth, token),
         inactive: lamportsToCollateral(inactive.eth, token),
-        price: markets[ETH_MINT].midPrice!,
+        price: getPythPriceForToken(token, prices),
         token: token,
       };
     case 'SOL':
       return {
         deposited: lamportsToCollateral(deposited.sol, token),
         inactive: lamportsToCollateral(inactive.sol, token),
-        price: markets[SOL_MINT].midPrice!.mul(1000),
+        price: getPythPriceForToken(token, prices),
         token: token,
       };
     case 'FTT':
       return {
         deposited: lamportsToCollateral(deposited.ftt, token),
         inactive: lamportsToCollateral(inactive.ftt, token),
-        price: markets[FTT_MINT].midPrice!,
+        price: getPythPriceForToken(token, prices),
         token: token,
       };
     case 'RAY':
       return {
         deposited: lamportsToCollateral(deposited.ray, token),
         inactive: lamportsToCollateral(inactive.ray, token),
-        price: markets[RAY_MINT].midPrice!,
+        price: getPythPriceForToken(token, prices),
         token: token,
       };
     case 'mSOL':
       return {
         deposited: lamportsToCollateral(deposited.msol, token),
         inactive: lamportsToCollateral(inactive.msol, token),
-        price: markets[MSOL_MINT].midPrice!.mul(1000),
+        price: getPythPriceForToken(token, prices),
         token: token,
       };
   }
 };
 
-export const getTotalCollateral = async (markets: Record<string, SerumMarket>, market: BorrowingMarketState) => {
-  if (
-    !markets[BTC_MINT]?.midPrice ||
-    !markets[ETH_MINT]?.midPrice ||
-    !markets[FTT_MINT]?.midPrice ||
-    !markets[SOL_MINT]?.midPrice ||
-    !markets[RAY_MINT]?.midPrice ||
-    !markets[SRM_MINT]?.midPrice ||
-    !markets[MSOL_MINT]?.midPrice
-  ) {
-    logger.error({ message: 'error getting all prices from Serum', markets });
-    throw Error('Could not get all prices from Serum');
+function getPythPriceForToken(token: SupportedToken, prices: PythPrice[]) {
+  const price = prices.find((x) => x.token === token);
+  if (price && price.priceData && price.priceData.price) {
+    return new Decimal(price.priceData.price);
+  }
+  throw Error(`Could not get price from Pyth for ${token}`);
+}
+
+export const getTotalCollateral = async (prices: PythPrice[], market: BorrowingMarketState) => {
+  if (prices.find((x) => !x.priceData)) {
+    logger.error({ message: 'error getting price from pyth', markets: prices });
+    throw Error('Could not get prices from Pyth');
   }
   let collateralTotals: CollateralTotals[] = [];
   let total = new Decimal(0);
   let inactive = new Decimal(0);
   let deposited = new Decimal(0);
   for (const token of SUPPORTED_TOKENS) {
-    const coll = getTokenCollateral(token, market.depositedCollateral, market.inactiveCollateral, markets);
+    const coll = getTokenCollateral(token, market.depositedCollateral, market.inactiveCollateral, prices);
     collateralTotals.push(coll);
     total = total.add(coll.deposited.add(coll.inactive).mul(coll.price));
     inactive = inactive.add(coll.inactive.mul(coll.price));

@@ -2,14 +2,13 @@ import { Request } from 'express';
 import { LoanResponse } from '../models/api/LoanResponse';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { ENV, Web3Client } from '../services/web3/client';
-import { tryGetPublicKeyFromString } from '../utils/tokenUtils';
+import { getPythTokens, tryGetPublicKeyFromString } from '../utils/tokenUtils';
 import { badRequest } from '../utils/apiUtils';
 import { Hubble, UserMetadata } from '@hubbleprotocol/hubble-sdk';
-import { createSerumMarketService } from '../services/serum/SerumMarketService';
-import { MINT_ADDRESSES } from '../constants/tokens';
-import { SerumMarket } from '../models/SerumMarket';
 import Router from 'express-promise-router';
 import { getLoansFromUserVaults, LoansParameters } from './loans';
+import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
+import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
 
 const ownersRoute = Router();
 
@@ -29,16 +28,18 @@ ownersRoute.get(
 
     let web3Client: Web3Client = new Web3Client(env);
     const hubbleSdk = new Hubble(env, web3Client.connection);
-    const serumService = createSerumMarketService();
+
+    const config = getConfigByCluster(env);
+    const pythService = new PythPriceService(web3Client);
 
     const responses = await Promise.all([
-      serumService.getMarkets(MINT_ADDRESSES, 'confirmed'),
+      pythService.getTokenPrices(getPythTokens(config)),
       hubbleSdk.getUserMetadatas(user),
     ]);
 
-    const serumMarkets: Record<string, SerumMarket> = responses[0];
+    const pythPrices: PythPrice[] = responses[0];
     const userVaults: UserMetadata[] = responses[1];
-    const loans = getLoansFromUserVaults(userVaults, serumMarkets);
+    const loans = getLoansFromUserVaults(userVaults, pythPrices);
 
     response.send(loans);
   }
