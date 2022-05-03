@@ -1,9 +1,8 @@
 import { HBB_DECIMALS, STABLECOIN_DECIMALS } from '../constants/math';
 import { MetricsResponse } from '../models/api/MetricsResponse';
-import { createSerumMarketService } from '../services/serum/SerumMarketService';
 import { ENV, Web3Client } from '../services/web3/client';
 import * as hdr from 'hdr-histogram-js';
-import { MINT_ADDRESSES, SUPPORTED_TOKENS } from '../constants/tokens';
+import { SUPPORTED_TOKENS } from '../constants/tokens';
 import { d3BinsToResponse, getPercentiles } from '../utils/histogramUtils';
 import { OrcaPriceService } from '../services/price/OrcaPriceService';
 import {
@@ -30,6 +29,8 @@ import {
 import { bin } from 'd3-array';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import RedisProvider from '../services/redis/redis';
+import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
+import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 
 /**
  * Get live Hubble on-chain metrics data
@@ -76,6 +77,7 @@ function getMetricsRedisKey(env: ENV) {
 
 async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResponse> {
   let web3Client: Web3Client = new Web3Client(env);
+  const config = getConfigByCluster(env);
 
   //TODO: build own histogram implementation that supports Decimal instead of number..
   // or find a lib that does this already
@@ -89,7 +91,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
 
   try {
     const hubbleSdk = new Hubble(env, web3Client.connection);
-    const serumService = createSerumMarketService();
+    const pythService = new PythPriceService(web3Client, config);
     const orcaService = new OrcaPriceService();
     const saberService = new SaberPriceService();
     const jupiterService = new JupiterPriceService();
@@ -98,7 +100,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
     // we use them in an array so we get type-safe array indexing later on, but order is important!
     const responses = await Promise.all([
       hubbleSdk.getBorrowingMarketState(),
-      serumService.getMarkets(MINT_ADDRESSES, 'confirmed'),
+      pythService.getTokenPrices(),
       orcaService.getHbbPrice(),
       hubbleSdk.getAllUserMetadatas(),
       hubbleSdk.getStakingPoolState(),
@@ -114,7 +116,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
     const timestamp = new Date().valueOf();
 
     const borrowingMarketState: BorrowingMarketState = responses[0];
-    const markets = responses[1];
+    const pythPrices: PythPrice[] = responses[1];
     const hbbPrice: Decimal = responses[2].getRate();
     const userVaults: UserMetadata[] = responses[3];
     const stakingPool: StakingPoolState = responses[4];
@@ -126,7 +128,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
     const saberStats: PriceResponse = responses[10];
     const jupiterStats: PriceResponse = responses[11];
 
-    const collateral = await getTotalCollateral(markets, borrowingMarketState);
+    const collateral = await getTotalCollateral(pythPrices, borrowingMarketState);
     const borrowers = new Set<string>();
     for (const userVault of userVaults.filter((x) => x.borrowedStablecoin.greaterThan(0))) {
       const borrowedStablecoin = userVault.borrowedStablecoin.dividedBy(STABLECOIN_DECIMALS);
@@ -136,7 +138,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
 
       let collateralTotal = new Decimal(0);
       for (const token of SUPPORTED_TOKENS) {
-        const coll = getTokenCollateral(token, userVault.depositedCollateral, userVault.inactiveCollateral, markets);
+        const coll = getTokenCollateral(token, userVault.depositedCollateral, userVault.inactiveCollateral, pythPrices);
         collateralTotal = collateralTotal.add(coll.deposited.mul(coll.price));
       }
       const collRatio = calculateCollateralRatio(borrowedStablecoin, collateralTotal);

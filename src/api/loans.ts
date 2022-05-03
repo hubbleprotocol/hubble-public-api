@@ -4,19 +4,19 @@ import { ENV, Web3Client } from '../services/web3/client';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { badRequest, notFound } from '../utils/apiUtils';
 import { tryGetPublicKeyFromString } from '../utils/tokenUtils';
-import { MINT_ADDRESSES, SUPPORTED_TOKENS } from '../constants/tokens';
+import { SUPPORTED_TOKENS } from '../constants/tokens';
 import { Hubble, UserMetadata, UserMetadataWithJson } from '@hubbleprotocol/hubble-sdk';
 import Decimal from 'decimal.js';
 import { calculateCollateralRatio, dateToUnixSeconds, getTokenCollateral } from '../utils/calculations';
 import { STABLECOIN_DECIMALS } from '../constants/math';
-import { createSerumMarketService } from '../services/serum/SerumMarketService';
-import { SerumMarket } from '../models/SerumMarket';
 import { LoanResponse, LoanResponseWithJson } from '../models/api/LoanResponse';
 import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 import { PublicKey } from '@solana/web3.js';
 import { getLoanHistory } from '../services/database';
 import RedisProvider from '../services/redis/redis';
 import { HistoryQueryParams } from './history';
+import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
+import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 
 /**
  * Get live Hubble on-chain loan data
@@ -43,16 +43,17 @@ loansRoute.get(
 
     let web3Client: Web3Client = new Web3Client(env);
     const hubbleSdk = new Hubble(env, web3Client.connection);
-    const serumService = createSerumMarketService();
+    const config = getConfigByCluster(env);
+    const pythService = new PythPriceService(web3Client, config);
 
     const responses = await Promise.all([
-      serumService.getMarkets(MINT_ADDRESSES, 'confirmed'),
+      pythService.getTokenPrices(),
       includeJsonResponse ? hubbleSdk.getAllUserMetadatasIncludeJsonResponse() : hubbleSdk.getAllUserMetadatas(),
     ]);
 
-    const serumMarkets: Record<string, SerumMarket> = responses[0];
+    const pythPrices: PythPrice[] = responses[0];
     const userVaults = responses[1];
-    const loans = getLoansFromUserVaults(userVaults, serumMarkets);
+    const loans = getLoansFromUserVaults(userVaults, pythPrices);
     response.send(loans);
   }
 );
@@ -130,17 +131,18 @@ loansRoute.get(
 
     let web3Client: Web3Client = new Web3Client(env);
     const hubbleSdk = new Hubble(env, web3Client.connection);
-    const serumService = createSerumMarketService();
+    const config = getConfigByCluster(env);
+    const pythService = new PythPriceService(web3Client, config);
 
     const responses = await Promise.all([
-      serumService.getMarkets(MINT_ADDRESSES, 'confirmed'),
+      pythService.getTokenPrices(),
       getUserMetadata(loanPubkey, hubbleSdk, response),
     ]);
 
-    const serumMarkets: Record<string, SerumMarket> = responses[0];
+    const pythPrices: PythPrice[] = responses[0];
     const userVault: UserMetadata | undefined = responses[1];
     if (userVault) {
-      const loan = getLoanFromUserVault(userVault, serumMarkets);
+      const loan = getLoanFromUserVault(userVault, pythPrices);
       response.send(loan);
     }
   }
@@ -158,15 +160,12 @@ async function getUserMetadata(pubkey: PublicKey, hubbleSdk: Hubble, response: R
   }
 }
 
-function getLoanFromUserVault(
-  userVault: UserMetadata | UserMetadataWithJson,
-  serumMarkets: Record<string, SerumMarket>
-) {
+function getLoanFromUserVault(userVault: UserMetadata | UserMetadataWithJson, pythPrices: PythPrice[]) {
   const borrowedStablecoin = userVault.borrowedStablecoin.dividedBy(STABLECOIN_DECIMALS);
   let collateralTotal = new Decimal(0);
   const collateralTotals = [];
   for (const token of SUPPORTED_TOKENS) {
-    const coll = getTokenCollateral(token, userVault.depositedCollateral, userVault.inactiveCollateral, serumMarkets);
+    const coll = getTokenCollateral(token, userVault.depositedCollateral, userVault.inactiveCollateral, pythPrices);
     collateralTotals.push(coll);
     collateralTotal = collateralTotal.add(coll.deposited.mul(coll.price));
   }
@@ -192,13 +191,10 @@ function getLoanFromUserVault(
   return loan;
 }
 
-export function getLoansFromUserVaults(
-  userVaults: UserMetadata[] | UserMetadataWithJson[],
-  serumMarkets: Record<string, SerumMarket>
-) {
+export function getLoansFromUserVaults(userVaults: UserMetadata[] | UserMetadataWithJson[], pythPrices: PythPrice[]) {
   const loans: LoanResponse | LoanResponseWithJson[] = [];
   for (const userVault of userVaults.filter((x) => x.borrowedStablecoin.greaterThan(0))) {
-    const loan = getLoanFromUserVault(userVault, serumMarkets);
+    const loan = getLoanFromUserVault(userVault, pythPrices);
     loans.push(loan);
   }
   return loans;
