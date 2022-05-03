@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import { ENV, Web3Client } from '../services/web3/client';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { badRequest, notFound } from '../utils/apiUtils';
-import { getPythTokens, tryGetPublicKeyFromString } from '../utils/tokenUtils';
+import { tryGetPublicKeyFromString } from '../utils/tokenUtils';
 import { SUPPORTED_TOKENS } from '../constants/tokens';
 import { Hubble, UserMetadata, UserMetadataWithJson } from '@hubbleprotocol/hubble-sdk';
 import Decimal from 'decimal.js';
@@ -44,10 +44,10 @@ loansRoute.get(
     let web3Client: Web3Client = new Web3Client(env);
     const hubbleSdk = new Hubble(env, web3Client.connection);
     const config = getConfigByCluster(env);
-    const pythService = new PythPriceService(web3Client);
+    const pythService = new PythPriceService(web3Client, config);
 
     const responses = await Promise.all([
-      pythService.getTokenPrices(getPythTokens(config)),
+      pythService.getTokenPrices(),
       includeJsonResponse ? hubbleSdk.getAllUserMetadatasIncludeJsonResponse() : hubbleSdk.getAllUserMetadatas(),
     ]);
 
@@ -132,10 +132,10 @@ loansRoute.get(
     let web3Client: Web3Client = new Web3Client(env);
     const hubbleSdk = new Hubble(env, web3Client.connection);
     const config = getConfigByCluster(env);
-    const pythService = new PythPriceService(web3Client);
+    const pythService = new PythPriceService(web3Client, config);
 
     const responses = await Promise.all([
-      pythService.getTokenPrices(getPythTokens(config)),
+      pythService.getTokenPrices(),
       getUserMetadata(loanPubkey, hubbleSdk, response),
     ]);
 

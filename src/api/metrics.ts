@@ -30,7 +30,6 @@ import { bin } from 'd3-array';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import RedisProvider from '../services/redis/redis';
 import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
-import { getPythTokens } from '../utils/tokenUtils';
 import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 
 /**
@@ -92,8 +91,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
 
   try {
     const hubbleSdk = new Hubble(env, web3Client.connection);
-    const pythService = new PythPriceService(web3Client);
-    const pythTokens = getPythTokens(config);
+    const pythService = new PythPriceService(web3Client, config);
     const orcaService = new OrcaPriceService();
     const saberService = new SaberPriceService();
     const jupiterService = new JupiterPriceService();
@@ -102,7 +100,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
     // we use them in an array so we get type-safe array indexing later on, but order is important!
     const responses = await Promise.all([
       hubbleSdk.getBorrowingMarketState(),
-      pythService.getTokenPrices(pythTokens),
+      pythService.getTokenPrices(),
       orcaService.getHbbPrice(),
       hubbleSdk.getAllUserMetadatas(),
       hubbleSdk.getStakingPoolState(),

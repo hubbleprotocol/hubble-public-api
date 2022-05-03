@@ -2,7 +2,7 @@ import { Request } from 'express';
 import { LoanResponse } from '../models/api/LoanResponse';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { ENV, Web3Client } from '../services/web3/client';
-import { getPythTokens, tryGetPublicKeyFromString } from '../utils/tokenUtils';
+import { tryGetPublicKeyFromString } from '../utils/tokenUtils';
 import { badRequest } from '../utils/apiUtils';
 import { Hubble, UserMetadata } from '@hubbleprotocol/hubble-sdk';
 import Router from 'express-promise-router';
@@ -30,12 +30,9 @@ ownersRoute.get(
     const hubbleSdk = new Hubble(env, web3Client.connection);
 
     const config = getConfigByCluster(env);
-    const pythService = new PythPriceService(web3Client);
+    const pythService = new PythPriceService(web3Client, config);
 
-    const responses = await Promise.all([
-      pythService.getTokenPrices(getPythTokens(config)),
-      hubbleSdk.getUserMetadatas(user),
-    ]);
+    const responses = await Promise.all([pythService.getTokenPrices(), hubbleSdk.getUserMetadatas(user)]);
 
     const pythPrices: PythPrice[] = responses[0];
     const userVaults: UserMetadata[] = responses[1];
