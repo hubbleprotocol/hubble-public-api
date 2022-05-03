@@ -134,6 +134,7 @@ const metricsToHistory = (metrics: MetricsSnapshot[], fromEpoch: number, toEpoch
     borrowersHistory: [],
     hbbHoldersHistory: [],
     hbbPriceHistory: [],
+    hbbSupplyHistory: [],
     loansHistory: [],
     usdhHistory: [],
   };
@@ -157,6 +158,10 @@ const metricsToHistory = (metrics: MetricsSnapshot[], fromEpoch: number, toEpoch
     response.hbbHoldersHistory.push({
       epoch: snapshot.createdOn,
       value: new Decimal(snapshot.metrics.hbb.numberOfHolders),
+    });
+    response.hbbSupplyHistory.push({
+      epoch: snapshot.createdOn,
+      value: new Decimal(snapshot.metrics.hbb.issued),
     });
   }
   return response;
