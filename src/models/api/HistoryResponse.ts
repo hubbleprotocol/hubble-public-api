@@ -11,6 +11,8 @@ export type HistoryResponse = {
   hbbPriceHistory: TimestampValueResponse[];
   // Number of HBB holders through history
   hbbHoldersHistory: TimestampValueResponse[];
+  // Number of HBB circulating supply through history
+  hbbSupplyHistory: TimestampValueResponse[];
   // Number of loans through history
   loansHistory: TimestampValueResponse[];
   // Total USDH issued through history
