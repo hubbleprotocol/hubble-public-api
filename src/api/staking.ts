@@ -142,8 +142,6 @@ async function fetchStaking(
   const metrics = responses[1];
   const history = responses[2];
 
-  console.log(history.metrics.length);
-
   if (history.metrics.length === 0) {
     logger.error(history.body);
     response.status(internalError).send('Could not get historical treasury vault data');
