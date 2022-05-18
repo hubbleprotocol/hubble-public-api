@@ -130,6 +130,7 @@ async function fetchStaking(
   from.setSeconds(0);
   const to = new Date(from);
   to.setMinutes(5);
+  to.setHours(from.getHours() + 2);
 
   const responses = await Promise.all([
     hubbleSdk.getGlobalConfig(),
@@ -146,7 +147,8 @@ async function fetchStaking(
     response.status(internalError).send('Could not get historical treasury vault data');
     return;
   }
-  const treasuryWeekAgo = history.metrics[0].metrics.borrowing.treasury;
+  const treasuryWeekAgo = history.metrics.reduce((prev, curr) => (prev.createdOn < curr.createdOn ? prev : curr))
+    .metrics.borrowing.treasury;
   const hbbApr = calculateHbbApr(
     new Decimal(metrics.borrowing.treasury),
     treasuryWeekAgo,
