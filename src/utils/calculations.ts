@@ -77,7 +77,10 @@ function getPythPriceForToken(token: SupportedToken, prices: PythPrice[]) {
     if (price.priceData.price) {
       return new Decimal(price.priceData.price);
     } else {
-      logger.info(`Current ${token} Pyth price is not valid, using previous price`, price.priceData.previousPrice);
+      logger.info({
+        message: `Current ${token} Pyth price is not valid, using previous price`,
+        previousPrice: price.priceData.previousPrice,
+      });
       return new Decimal(price.priceData.previousPrice);
     }
   }
