@@ -47,7 +47,7 @@
     "@orca-so/sdk": "^1.2.23",
     "@project-serum/anchor": "^0.22.0",
     "@project-serum/serum": "^0.13.61",
-    "@pythnetwork/client": "^2.6.3",
+    "@pythnetwork/client": "^2.7.0",
     "@saberhq/stableswap-sdk": "^1.12.46",
     "@solana/buffer-layout": "^4.0.0",
     "@solana/spl-token-registry": "^0.2.2517",
