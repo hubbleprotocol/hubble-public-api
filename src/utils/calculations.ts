@@ -73,8 +73,13 @@ export const getTokenCollateral = (
 
 function getPythPriceForToken(token: SupportedToken, prices: PythPrice[]) {
   const price = prices.find((x) => x.token === token);
-  if (price && price.priceData && price.priceData.price) {
-    return new Decimal(price.priceData.price);
+  if (price?.priceData) {
+    if (price.priceData.price) {
+      return new Decimal(price.priceData.price);
+    } else {
+      logger.info(`Current ${token} Pyth price is not valid, using previous price`, price.priceData.previousPrice);
+      return new Decimal(price.priceData.previousPrice);
+    }
   }
   throw Error(`Could not get price from Pyth for ${token}`);
 }

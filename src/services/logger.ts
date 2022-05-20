@@ -24,4 +24,8 @@ export const loggingStream: StreamOptions = {
   },
 };
 
+export const logObject = (obj: Object) => {
+  logger.info('%O', obj);
+};
+
 export default logger;
