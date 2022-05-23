@@ -8,6 +8,7 @@ import { MaintenanceModeResponse } from '../models/api/MaintenanceModeResponse';
 import { Request } from 'express';
 import Router from 'express-promise-router';
 import logger from '../services/logger';
+import RedisProvider from '../services/redis/redis';
 
 const awsEnv = getAwsEnvironmentVariables();
 
@@ -23,6 +24,13 @@ maintenanceModeRoute.get(
       env = request.query.env;
     }
     const parameterName = getMaintenanceModeParameterName(env);
+    const redis = RedisProvider.getInstance();
+    const cached = await redis.getAndParseKey<MaintenanceModeResponse>(parameterName);
+    if (cached) {
+      response.send(cached);
+      return;
+    }
+
     const parameter = await getParameter(
       parameterName,
       awsEnv.AWS_ACCESS_KEY_ID,
@@ -38,7 +46,9 @@ maintenanceModeRoute.get(
         response.status(internalError).send(err);
         return;
       }
-      response.send({ enabled: maintenanceModeNumber > 0 });
+      const res = { enabled: maintenanceModeNumber > 0 };
+      response.send(res);
+      await redis.saveWithExpiry(parameterName, res, 60);
     } else {
       const err = 'Could not get maintenance mode value from AWS';
       logger.error(err);
