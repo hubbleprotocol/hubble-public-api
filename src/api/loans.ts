@@ -95,8 +95,7 @@ loansRoute.get(
       expireAt.setSeconds(0);
       const key = loanToRedisKey(loan, env);
       history = await getLoanHistory(loan, env);
-      await redis.client.set(key, JSON.stringify(history));
-      await redis.client.expireat(key, dateToUnixSeconds(expireAt));
+      await redis.saveWithExpireAt(key, history, dateToUnixSeconds(expireAt));
     }
 
     const filtered = history.filter((x) => x.epoch >= fromEpoch && x.epoch <= toEpoch);
