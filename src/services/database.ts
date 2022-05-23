@@ -40,9 +40,14 @@ const getPostgresProvider = () => {
 
 let postgres = getPostgresProvider();
 
-export const testDbConnection = () => {
-  return postgres.raw('SELECT now()');
-};
+export const testDbConnection = async (): Promise<any> => {
+  try {
+    return await new Promise(resolve => resolve(postgres.raw('SELECT 1')));
+  } catch (err) {
+    logger.warn('could not connect to postgres', err);
+    throw err;
+  }
+}
 
 type JoinedLoanRow = {
   usdh_debt: string;

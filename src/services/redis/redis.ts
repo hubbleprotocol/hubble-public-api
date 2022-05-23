@@ -34,6 +34,15 @@ export default class RedisProvider {
     return this._client;
   }
 
+  async ping(): Promise<string> {
+    try {
+      return await this._client.ping();
+    } catch (err) {
+      logger.warn(`could not ping redis at http://${this._client.options.host}:${this._client.options.port}`, err)
+      throw err;
+    }
+  }
+
   async getAndParseKey<T>(key: string): Promise<T | undefined> {
     const value = await this._client.get(key);
     if (value) {
