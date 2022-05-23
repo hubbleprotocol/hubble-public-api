@@ -5,7 +5,7 @@ type: application
 version: 0.1.0
 dependencies:
   - name: service-base-chart
-    version: 0.0.1-SNAPSHOT-1648120390
+    version: 0.0.1-SNAPSHOT-1653325722
     repository: "@hubbleprotocol"
   - name: redis
     version: 16.4.5
