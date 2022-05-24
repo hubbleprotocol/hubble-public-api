@@ -25,6 +25,10 @@ export function getLoanRedisKey(loan: PublicKey, env: ENV) {
   return `loan-${env}-${loan.toString()}`;
 }
 
+export function getLoanHistoryRedisKey(loan: PublicKey, env: ENV) {
+  return `loan-history-${env}-${loan.toString()}`;
+}
+
 export function getLoansRedisKey(env: ENV, includeJson: boolean) {
   return includeJson ? `loans-${env}-withJson` : `loans-${env}`;
 }
