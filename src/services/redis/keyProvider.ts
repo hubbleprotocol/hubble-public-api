@@ -15,3 +15,7 @@ export function getUsdhStakersRedisKey(env: ENV) {
 export function getCirculatingSupplyRedisKey(env: ENV) {
   return `circulating-supply-${env}`;
 }
+
+export function getCirculatingSupplyValueRedisKey(env: ENV) {
+  return `circulating-supply-value-${env}`;
+}

@@ -5,6 +5,7 @@ import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { Hubble } from '@hubbleprotocol/hubble-sdk';
 import RedisProvider from '../services/redis/redis';
 import { getCirculatingSupplyRedisKey } from '../services/redis/keyProvider';
+import { CIRCULATING_SUPPLY_EXPIRY_IN_SECONDS } from '../constants/redis';
 
 /**
  * Get circulating supply of HBB (amount of HBB issued). This endpoint is required for external services like CoinGecko.
@@ -22,7 +23,7 @@ circulatingSupplyRoute.get('/', async (request: Request<never, string, never, En
       const hubbleSdk = new Hubble(env, web3Client.connection);
       const circulatingSupply = await hubbleSdk.getHbbCirculatingSupply();
       response.send(circulatingSupply.toString());
-      await redis.saveWithExpiry(redisKey, circulatingSupply.toString(), 60);
+      await redis.saveWithExpiry(redisKey, circulatingSupply.toString(), CIRCULATING_SUPPLY_EXPIRY_IN_SECONDS);
     }
   } else {
     response.status(unprocessable).send(error);
