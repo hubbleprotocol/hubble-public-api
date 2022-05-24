@@ -79,7 +79,7 @@ async function setHistoryMetrics(metrics: MetricsSnapshot[], env: ENV, redisProv
 
   logger.info({ message: 'cache history metrics in redis', key, expireAt, redisUrl });
 
-  return redisProvider.saveWithExpireAt(key, metrics, dateToUnixSeconds(expireAt));
+  return redisProvider.saveAsJsonWithExpiryAt(key, metrics, dateToUnixSeconds(expireAt));
 }
 
 async function getQueryResults(params: DocumentClient.QueryInput) {

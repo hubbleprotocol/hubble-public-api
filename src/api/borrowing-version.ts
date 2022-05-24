@@ -8,6 +8,8 @@ import { getBorrowingVersionParameterName } from '../constants/hubble';
 import { getParameter } from '../utils/awsUtils';
 import { getAwsEnvironmentVariables } from '../services/environmentService';
 import logger from '../services/logger';
+import RedisProvider from '../services/redis/redis';
+import { BORROWING_VERSION_EXPIRY_IN_SECONDS } from '../constants/redis';
 
 const awsEnv = getAwsEnvironmentVariables();
 
@@ -22,7 +24,14 @@ borrowingVersionRoute.get(
     if (request.query.env) {
       env = request.query.env;
     }
+
     const parameterName = getBorrowingVersionParameterName(env);
+    const redis = RedisProvider.getInstance();
+    const cached = await redis.getAndParseKey<BorrowingVersionResponse>(parameterName);
+    if (cached) {
+      response.send(cached);
+      return;
+    }
     const parameter = await getParameter(
       parameterName,
       awsEnv.AWS_ACCESS_KEY_ID,
@@ -38,7 +47,9 @@ borrowingVersionRoute.get(
         response.status(internalError).send(err);
         return;
       }
-      response.send({ version: borrowingVersion });
+      const res = { version: borrowingVersion };
+      response.send(res);
+      await redis.saveAsJsonWithExpiry(parameterName, res, BORROWING_VERSION_EXPIRY_IN_SECONDS);
     } else {
       const err = 'Could not get borrowing version value from AWS';
       logger.error(err);

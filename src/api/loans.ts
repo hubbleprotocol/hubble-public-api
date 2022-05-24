@@ -17,6 +17,8 @@ import RedisProvider from '../services/redis/redis';
 import { HistoryQueryParams } from './history';
 import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
 import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
+import { getLoanHistoryRedisKey, getLoanRedisKey, getLoansRedisKey } from '../services/redis/keyProvider';
+import { LOANS_EXPIRY_IN_SECONDS } from '../constants/redis';
 
 /**
  * Get live Hubble on-chain loan data
@@ -39,22 +41,30 @@ loansRoute.get(
   ) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
     const includeJsonResponse =
-      (request.query.includeJsonResponse || request.query.includeJsonResponse === '') ?? false;
+      (!!request.query.includeJsonResponse || request.query.includeJsonResponse === '') ?? false;
 
-    let web3Client: Web3Client = new Web3Client(env);
-    const hubbleSdk = new Hubble(env, web3Client.connection);
-    const config = getConfigByCluster(env);
-    const pythService = new PythPriceService(web3Client, config);
+    const redis = RedisProvider.getInstance();
+    const redisKey = getLoansRedisKey(env, includeJsonResponse);
+    const cached = await redis.getAndParseKey<LoanResponse[]>(redisKey);
+    if (cached) {
+      response.send(cached);
+    } else {
+      let web3Client: Web3Client = new Web3Client(env);
+      const hubbleSdk = new Hubble(env, web3Client.connection);
+      const config = getConfigByCluster(env);
+      const pythService = new PythPriceService(web3Client, config);
 
-    const responses = await Promise.all([
-      pythService.getTokenPrices(),
-      includeJsonResponse ? hubbleSdk.getAllUserMetadatasIncludeJsonResponse() : hubbleSdk.getAllUserMetadatas(),
-    ]);
+      const responses = await Promise.all([
+        pythService.getTokenPrices(),
+        includeJsonResponse ? hubbleSdk.getAllUserMetadatasIncludeJsonResponse() : hubbleSdk.getAllUserMetadatas(),
+      ]);
 
-    const pythPrices: PythPrice[] = responses[0];
-    const userVaults = responses[1];
-    const loans = getLoansFromUserVaults(userVaults, pythPrices);
-    response.send(loans);
+      const pythPrices: PythPrice[] = responses[0];
+      const userVaults = responses[1];
+      const loans = getLoansFromUserVaults(userVaults, pythPrices);
+      response.send(loans);
+      await redis.saveAsJsonWithExpiry(redisKey, loans, LOANS_EXPIRY_IN_SECONDS);
+    }
   }
 );
 
@@ -87,32 +97,30 @@ loansRoute.get(
     }
 
     const redis = RedisProvider.getInstance();
-    let history = await getCachedLoanHistory(env, loan, redis);
-    if (!history) {
+    const key = getLoanHistoryRedisKey(loan, env);
+    let history = await redis.getAndParseKey<LoanHistoryResponse[]>(key);
+    if (history) {
+      sendFilteredHistory(history, fromEpoch, toEpoch, response);
+    } else {
+      history = await getLoanHistory(loan, env);
+      sendFilteredHistory(history, fromEpoch, toEpoch, response);
       const expireAt = new Date();
       expireAt.setHours(expireAt.getHours() + 1);
       expireAt.setMinutes(1);
       expireAt.setSeconds(0);
-      const key = loanToRedisKey(loan, env);
-      history = await getLoanHistory(loan, env);
-      await redis.saveWithExpireAt(key, history, dateToUnixSeconds(expireAt));
+      await redis.saveAsJsonWithExpiryAt(key, history, dateToUnixSeconds(expireAt));
     }
-
-    const filtered = history.filter((x) => x.epoch >= fromEpoch && x.epoch <= toEpoch);
-    response.send(filtered);
   }
 );
 
-async function getCachedLoanHistory(env: ENV, loan: PublicKey, redisClient: RedisProvider) {
-  const loanHistory = await redisClient.client.get(loanToRedisKey(loan, env));
-  if (loanHistory) {
-    return JSON.parse(loanHistory) as LoanHistoryResponse[];
-  }
-  return undefined;
-}
-
-function loanToRedisKey(loan: PublicKey, env: ENV) {
-  return `loan-${env}-${loan.toString()}`;
+function sendFilteredHistory(
+  history: LoanHistoryResponse[],
+  fromEpoch: number,
+  toEpoch: number,
+  response: Response<LoanHistoryResponse[] | string>
+) {
+  const filtered = history.filter((x) => x.epoch >= fromEpoch && x.epoch <= toEpoch);
+  response.send(filtered);
 }
 
 /**
@@ -128,21 +136,31 @@ loansRoute.get(
       return;
     }
 
-    let web3Client: Web3Client = new Web3Client(env);
-    const hubbleSdk = new Hubble(env, web3Client.connection);
-    const config = getConfigByCluster(env);
-    const pythService = new PythPriceService(web3Client, config);
+    const redis = RedisProvider.getInstance();
+    const key = getLoanRedisKey(loanPubkey, env);
+    const cached = await redis.getAndParseKey<LoanResponse>(key);
+    if (cached) {
+      response.send(cached);
+    } else {
+      let web3Client: Web3Client = new Web3Client(env);
+      const hubbleSdk = new Hubble(env, web3Client.connection);
+      const config = getConfigByCluster(env);
+      const pythService = new PythPriceService(web3Client, config);
 
-    const responses = await Promise.all([
-      pythService.getTokenPrices(),
-      getUserMetadata(loanPubkey, hubbleSdk, response),
-    ]);
+      const responses = await Promise.all([
+        pythService.getTokenPrices(),
+        getUserMetadata(loanPubkey, hubbleSdk, response),
+      ]);
 
-    const pythPrices: PythPrice[] = responses[0];
-    const userVault: UserMetadata | undefined = responses[1];
-    if (userVault) {
-      const loan = getLoanFromUserVault(userVault, pythPrices);
-      response.send(loan);
+      const pythPrices: PythPrice[] = responses[0];
+      const userVault: UserMetadata | undefined = responses[1];
+      if (userVault) {
+        const loan = getLoanFromUserVault(userVault, pythPrices);
+        response.send(loan);
+        await redis.saveAsJsonWithExpiry(key, loan, LOANS_EXPIRY_IN_SECONDS);
+      } else {
+        response.status(notFound).send(`Could not get loan for public key: ${request.params.pubkey}`);
+      }
     }
   }
 );
