@@ -8,7 +8,7 @@ import { MaintenanceModeResponse } from '../models/api/MaintenanceModeResponse';
 import { Request } from 'express';
 import Router from 'express-promise-router';
 import logger from '../services/logger';
-import RedisProvider from '../services/redis/redis';
+import redis from '../services/redis/redis';
 import { MAINTENANCE_MODE_EXPIRY_IN_SECONDS } from '../constants/redis';
 
 const awsEnv = getAwsEnvironmentVariables();
@@ -25,7 +25,6 @@ maintenanceModeRoute.get(
       env = request.query.env;
     }
     const parameterName = getMaintenanceModeParameterName(env);
-    const redis = RedisProvider.getInstance();
     const cached = await redis.getAndParseKey<MaintenanceModeResponse>(parameterName);
     if (cached) {
       response.send(cached);

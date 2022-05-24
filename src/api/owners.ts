@@ -9,7 +9,7 @@ import Router from 'express-promise-router';
 import { getLoansFromUserVaults, LoansParameters } from './loans';
 import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
-import RedisProvider from '../services/redis/redis';
+import redis from '../services/redis/redis';
 import { getOwnerRedisKey } from '../services/redis/keyProvider';
 import { LOANS_EXPIRY_IN_SECONDS } from '../constants/redis';
 
@@ -29,7 +29,6 @@ ownersRoute.get(
       return;
     }
 
-    const redis = RedisProvider.getInstance();
     const key = getOwnerRedisKey(user, env);
     const cached = await redis.getAndParseKey<LoanResponse[]>(key);
     if (cached) {

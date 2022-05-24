@@ -13,7 +13,7 @@ import { LoanResponse, LoanResponseWithJson } from '../models/api/LoanResponse';
 import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 import { PublicKey } from '@solana/web3.js';
 import { getLoanHistory } from '../services/database';
-import RedisProvider from '../services/redis/redis';
+import redis from '../services/redis/redis';
 import { HistoryQueryParams } from './history';
 import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
 import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
@@ -43,7 +43,6 @@ loansRoute.get(
     const includeJsonResponse =
       (!!request.query.includeJsonResponse || request.query.includeJsonResponse === '') ?? false;
 
-    const redis = RedisProvider.getInstance();
     const redisKey = getLoansRedisKey(env, includeJsonResponse);
     const cached = await redis.getAndParseKey<LoanResponse[]>(redisKey);
     if (cached) {
@@ -96,7 +95,6 @@ loansRoute.get(
       return;
     }
 
-    const redis = RedisProvider.getInstance();
     const key = getLoanHistoryRedisKey(loan, env);
     let history = await redis.getAndParseKey<LoanHistoryResponse[]>(key);
     if (history) {
@@ -136,7 +134,6 @@ loansRoute.get(
       return;
     }
 
-    const redis = RedisProvider.getInstance();
     const key = getLoanRedisKey(loanPubkey, env);
     const cached = await redis.getAndParseKey<LoanResponse>(key);
     if (cached) {

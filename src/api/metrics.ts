@@ -28,7 +28,7 @@ import {
 } from '@hubbleprotocol/hubble-sdk';
 import { bin } from 'd3-array';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
-import RedisProvider from '../services/redis/redis';
+import redis from '../services/redis/redis';
 import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
 import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 import { getMetricsRedisKey } from '../services/redis/keyProvider';
@@ -58,7 +58,6 @@ export default metricsRoute;
 
 export async function getMetrics(env: ENV) {
   const bins = 20;
-  const redis = RedisProvider.getInstance();
   const key = getMetricsRedisKey(env);
   let metrics = await redis.getAndParseKey<MetricsResponse>(key);
   if (!metrics) {

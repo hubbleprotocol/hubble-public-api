@@ -12,7 +12,7 @@ import GlobalConfig from '@hubbleprotocol/hubble-sdk/dist/models/GlobalConfig';
 import { MetricsResponse } from '../models/api/MetricsResponse';
 import { HBB_DECIMALS, STABLECOIN_DECIMALS } from '../constants/math';
 import { ENV, Web3Client } from '../services/web3/client';
-import RedisProvider from '../services/redis/redis';
+import redis from '../services/redis/redis';
 import { StakingUserResponse } from '../models/api/StakingUserResponse';
 import { groupBy } from '../utils/arrayUtils';
 import { PublicKey } from '@solana/web3.js';
@@ -29,13 +29,13 @@ stakingRoute.get(
     const [web3Client, env, error] = parseFromQueryParams(request.query);
     if (web3Client && env) {
       const redisKey = getStakingRedisKey(env);
-      let staking = await RedisProvider.getInstance().getAndParseKey<StakingResponse[]>(redisKey);
+      let staking = await redis.getAndParseKey<StakingResponse[]>(redisKey);
       if (staking) {
         response.send(staking);
       } else {
         staking = await fetchStaking(env, web3Client, response);
         if (staking) {
-          await RedisProvider.getInstance().saveAsJsonWithExpiry(redisKey, staking, STAKING_STATS_EXPIRY_IN_SECONDS);
+          await redis.saveAsJsonWithExpiry(redisKey, staking, STAKING_STATS_EXPIRY_IN_SECONDS);
           response.send(staking);
         }
       }
@@ -54,10 +54,10 @@ stakingRoute.get(
     const [web3Client, env, error] = parseFromQueryParams(request.query);
     if (web3Client && env) {
       const redisKey = getHbbStakersRedisKey(env);
-      let stakingUsers = await RedisProvider.getInstance().getAndParseKey<StakingUserResponse[]>(redisKey);
+      let stakingUsers = await redis.getAndParseKey<StakingUserResponse[]>(redisKey);
       if (!stakingUsers) {
         stakingUsers = await fetchHbbStakers(env, web3Client);
-        await RedisProvider.getInstance().saveAsJsonWithExpiry(redisKey, stakingUsers, STAKING_STATS_EXPIRY_IN_SECONDS);
+        await redis.saveAsJsonWithExpiry(redisKey, stakingUsers, STAKING_STATS_EXPIRY_IN_SECONDS);
       }
       response.send(stakingUsers);
     } else {
@@ -75,10 +75,10 @@ stakingRoute.get(
     const [web3Client, env, error] = parseFromQueryParams(request.query);
     if (web3Client && env) {
       const redisKey = getUsdhStakersRedisKey(env);
-      let usdhUsers = await RedisProvider.getInstance().getAndParseKey<StakingUserResponse[]>(redisKey);
+      let usdhUsers = await redis.getAndParseKey<StakingUserResponse[]>(redisKey);
       if (!usdhUsers) {
         usdhUsers = await fetchUsdhStakers(env, web3Client);
-        await RedisProvider.getInstance().saveAsJsonWithExpiry(redisKey, usdhUsers, STAKING_STATS_EXPIRY_IN_SECONDS);
+        await redis.saveAsJsonWithExpiry(redisKey, usdhUsers, STAKING_STATS_EXPIRY_IN_SECONDS);
       }
       response.send(usdhUsers);
     } else {
