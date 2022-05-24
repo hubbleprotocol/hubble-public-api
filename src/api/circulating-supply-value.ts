@@ -4,7 +4,7 @@ import { Request } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { OrcaPriceService } from '../services/price/OrcaPriceService';
 import { Hubble } from '@hubbleprotocol/hubble-sdk';
-import RedisProvider from '../services/redis/redis';
+import redis from '../services/redis/redis';
 import { getCirculatingSupplyValueRedisKey } from '../services/redis/keyProvider';
 import { CIRCULATING_SUPPLY_EXPIRY_IN_SECONDS } from '../constants/redis';
 
@@ -17,7 +17,6 @@ circulatingSupplyValueRoute.get(
   async (request: Request<never, string, never, EnvironmentQueryParams>, response) => {
     const [web3Client, env, error] = parseFromQueryParams(request.query);
     if (web3Client && env) {
-      const redis = RedisProvider.getInstance();
       const redisKey = getCirculatingSupplyValueRedisKey(env);
       const cached = await redis.getKey(redisKey);
       if (cached) {

@@ -8,7 +8,7 @@ import { getBorrowingVersionParameterName } from '../constants/hubble';
 import { getParameter } from '../utils/awsUtils';
 import { getAwsEnvironmentVariables } from '../services/environmentService';
 import logger from '../services/logger';
-import RedisProvider from '../services/redis/redis';
+import redis from '../services/redis/redis';
 import { BORROWING_VERSION_EXPIRY_IN_SECONDS } from '../constants/redis';
 
 const awsEnv = getAwsEnvironmentVariables();
@@ -26,7 +26,6 @@ borrowingVersionRoute.get(
     }
 
     const parameterName = getBorrowingVersionParameterName(env);
-    const redis = RedisProvider.getInstance();
     const cached = await redis.getAndParseKey<BorrowingVersionResponse>(parameterName);
     if (cached) {
       response.send(cached);
