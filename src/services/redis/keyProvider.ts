@@ -36,3 +36,7 @@ export function getLoansRedisKey(env: ENV, includeJson: boolean) {
 export function getMetricsRedisKey(env: ENV) {
   return `metrics-${env}`;
 }
+
+export function getOwnerRedisKey(owner: PublicKey, env: ENV) {
+  return `owner-${env}-${owner.toString()}`;
+}
