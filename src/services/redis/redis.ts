@@ -38,7 +38,7 @@ export default class RedisProvider {
     try {
       return await this._client.ping();
     } catch (err) {
-      logger.warn(`could not ping redis at http://${this._client.options.host}:${this._client.options.port}`, err)
+      logger.warn(`could not ping redis at http://${this._client.options.host}:${this._client.options.port}`, err);
       throw err;
     }
   }
@@ -49,6 +49,10 @@ export default class RedisProvider {
       return JSON.parse(value) as T;
     }
     return undefined;
+  }
+
+  async getKey<T>(key: string): Promise<string | null> {
+    return this._client.get(key);
   }
 
   saveWithExpiry<T>(key: string, value: T, expireInSeconds: number) {

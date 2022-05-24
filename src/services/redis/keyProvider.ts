@@ -11,3 +11,7 @@ export function getHbbStakersRedisKey(env: ENV) {
 export function getUsdhStakersRedisKey(env: ENV) {
   return `stakers-usdh-${env}`;
 }
+
+export function getCirculatingSupplyRedisKey(env: ENV) {
+  return `circulating-supply-${env}`;
+}
