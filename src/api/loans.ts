@@ -103,15 +103,25 @@ loansRoute.get(
     expireAt.setMinutes(1);
     expireAt.setSeconds(0);
     let history = await redis.getAndParseKey<LoanHistoryResponse[]>(key);
-    if (!history) {
+    if (history) {
+      sendFilteredHistory(history, fromEpoch, toEpoch, response);
+    } else {
       history = await getLoanHistory(loan, env);
+      sendFilteredHistory(history, fromEpoch, toEpoch, response);
+      await redis.saveAsJsonWithExpiryAt(key, history, dateToUnixSeconds(expireAt));
     }
-
-    const filtered = history.filter((x) => x.epoch >= fromEpoch && x.epoch <= toEpoch);
-    response.send(filtered);
-    await redis.saveAsJsonWithExpiryAt(key, history, dateToUnixSeconds(expireAt));
   }
 );
+
+function sendFilteredHistory(
+  history: LoanHistoryResponse[],
+  fromEpoch: number,
+  toEpoch: number,
+  response: Response<LoanHistoryResponse[] | string>
+) {
+  const filtered = history.filter((x) => x.epoch >= fromEpoch && x.epoch <= toEpoch);
+  response.send(filtered);
+}
 
 /**
  * Get a specific loan
