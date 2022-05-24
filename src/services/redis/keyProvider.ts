@@ -32,3 +32,7 @@ export function getLoanHistoryRedisKey(loan: PublicKey, env: ENV) {
 export function getLoansRedisKey(env: ENV, includeJson: boolean) {
   return includeJson ? `loans-${env}-withJson` : `loans-${env}`;
 }
+
+export function getMetricsRedisKey(env: ENV) {
+  return `metrics-${env}`;
+}

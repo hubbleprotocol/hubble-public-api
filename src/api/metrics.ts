@@ -31,48 +31,41 @@ import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import RedisProvider from '../services/redis/redis';
 import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
 import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
+import { getMetricsRedisKey } from '../services/redis/keyProvider';
+import { METRICS_EXPIRY_IN_SECONDS } from '../constants/redis';
+import logger from '../services/logger';
+import { internalError } from '../utils/apiUtils';
 
 /**
  * Get live Hubble on-chain metrics data
  */
 const metricsRoute = Router();
-metricsRoute.get('/', async (request: Request<never, MetricsResponse, never, EnvironmentQueryParams>, response) => {
-  let env: ENV = request.query.env ?? 'mainnet-beta';
-  let metrics = await getMetrics(env);
-  response.send(metrics);
-});
+metricsRoute.get(
+  '/',
+  async (request: Request<never, MetricsResponse | string, never, EnvironmentQueryParams>, response) => {
+    let env: ENV = request.query.env ?? 'mainnet-beta';
+    try {
+      let metrics = await getMetrics(env);
+      response.send(metrics);
+    } catch (e) {
+      logger.error(e);
+      response.status(internalError).send('Could not get metrics');
+    }
+  }
+);
 
 export default metricsRoute;
 
 export async function getMetrics(env: ENV) {
   const bins = 20;
-  let metrics = await getCachedMetrics(env);
-  if (!metrics) {
-    metrics = await fetchMetrics(env, bins);
-    await saveMetricsToCache(env, metrics);
-  }
-  return metrics;
-}
-
-async function saveMetricsToCache(env: ENV, metrics: MetricsResponse) {
   const redis = RedisProvider.getInstance();
   const key = getMetricsRedisKey(env);
-  const expireInSeconds = 5 * 60;
-  return redis.saveWithExpiry(key, metrics, expireInSeconds);
-}
-
-async function getCachedMetrics(env: ENV) {
-  const redis = RedisProvider.getInstance().client;
-  const key = getMetricsRedisKey(env);
-  const metrics = await redis.get(key);
-  if (metrics) {
-    return JSON.parse(metrics) as MetricsResponse;
+  let metrics = await redis.getAndParseKey<MetricsResponse>(key);
+  if (!metrics) {
+    metrics = await fetchMetrics(env, bins);
+    await redis.saveWithExpiry(key, metrics, METRICS_EXPIRY_IN_SECONDS);
   }
-  return undefined;
-}
-
-function getMetricsRedisKey(env: ENV) {
-  return `metrics-${env}`;
+  return metrics;
 }
 
 async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResponse> {
