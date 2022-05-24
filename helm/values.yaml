@@ -90,6 +90,9 @@ service-base-chart:
 redis:
   architecture: standalone
   fullnameOverride: redis-hubble-public-api
+  master:
+    extraFlags:
+      - "--maxmemory-policy allkeys-lru"
   auth:
     enabled: false
 
