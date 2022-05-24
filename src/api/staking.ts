@@ -35,7 +35,7 @@ stakingRoute.get(
       } else {
         staking = await fetchStaking(env, web3Client, response);
         if (staking) {
-          await RedisProvider.getInstance().saveWithExpiry(redisKey, staking, STAKING_STATS_EXPIRY_IN_SECONDS);
+          await RedisProvider.getInstance().saveAsJsonWithExpiry(redisKey, staking, STAKING_STATS_EXPIRY_IN_SECONDS);
           response.send(staking);
         }
       }
@@ -57,7 +57,7 @@ stakingRoute.get(
       let stakingUsers = await RedisProvider.getInstance().getAndParseKey<StakingUserResponse[]>(redisKey);
       if (!stakingUsers) {
         stakingUsers = await fetchHbbStakers(env, web3Client);
-        await RedisProvider.getInstance().saveWithExpiry(redisKey, stakingUsers, STAKING_STATS_EXPIRY_IN_SECONDS);
+        await RedisProvider.getInstance().saveAsJsonWithExpiry(redisKey, stakingUsers, STAKING_STATS_EXPIRY_IN_SECONDS);
       }
       response.send(stakingUsers);
     } else {
@@ -78,7 +78,7 @@ stakingRoute.get(
       let usdhUsers = await RedisProvider.getInstance().getAndParseKey<StakingUserResponse[]>(redisKey);
       if (!usdhUsers) {
         usdhUsers = await fetchUsdhStakers(env, web3Client);
-        await RedisProvider.getInstance().saveWithExpiry(redisKey, usdhUsers, STAKING_STATS_EXPIRY_IN_SECONDS);
+        await RedisProvider.getInstance().saveAsJsonWithExpiry(redisKey, usdhUsers, STAKING_STATS_EXPIRY_IN_SECONDS);
       }
       response.send(usdhUsers);
     } else {

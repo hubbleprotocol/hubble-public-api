@@ -55,13 +55,23 @@ export default class RedisProvider {
     return this._client.get(key);
   }
 
-  saveWithExpiry<T>(key: string, value: T, expireInSeconds: number) {
+  saveAsJsonWithExpiry<T>(key: string, value: T, expireInSeconds: number) {
     logger.info({ message: 'saving key to redis', key, expireInSeconds });
     return this._client.multi().setnx(key, JSON.stringify(value)).expire(key, expireInSeconds).exec();
   }
 
-  saveWithExpireAt<T>(key: string, value: T, expireAt: number) {
+  saveWithExpiry(key: string, value: string, expireInSeconds: number) {
+    logger.info({ message: 'saving key to redis', key, expireInSeconds });
+    return this._client.multi().setnx(key, value).expire(key, expireInSeconds).exec();
+  }
+
+  saveAsJsonWithExpiryAt<T>(key: string, value: T, expireAt: number) {
     logger.info({ message: 'saving key to redis', key, expireAt });
     return this._client.multi().setnx(key, JSON.stringify(value)).expireat(key, expireAt).exec();
+  }
+
+  saveWithExpireAt(key: string, value: string, expireAt: number) {
+    logger.info({ message: 'saving key to redis', key, expireAt });
+    return this._client.multi().setnx(key, value).expire(key, expireAt).exec();
   }
 }

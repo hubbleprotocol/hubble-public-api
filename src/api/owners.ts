@@ -48,7 +48,7 @@ ownersRoute.get(
       const loans = getLoansFromUserVaults(userVaults, pythPrices);
 
       response.send(loans);
-      await redis.saveWithExpiry(key, loans, LOANS_EXPIRY_IN_SECONDS);
+      await redis.saveAsJsonWithExpiry(key, loans, LOANS_EXPIRY_IN_SECONDS);
     }
   }
 );

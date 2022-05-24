@@ -63,7 +63,7 @@ loansRoute.get(
       const userVaults = responses[1];
       const loans = getLoansFromUserVaults(userVaults, pythPrices);
       response.send(loans);
-      await redis.saveWithExpiry(redisKey, loans, LOANS_EXPIRY_IN_SECONDS);
+      await redis.saveAsJsonWithExpiry(redisKey, loans, LOANS_EXPIRY_IN_SECONDS);
     }
   }
 );
@@ -109,7 +109,7 @@ loansRoute.get(
 
     const filtered = history.filter((x) => x.epoch >= fromEpoch && x.epoch <= toEpoch);
     response.send(filtered);
-    await redis.saveWithExpireAt(key, history, dateToUnixSeconds(expireAt));
+    await redis.saveAsJsonWithExpiryAt(key, history, dateToUnixSeconds(expireAt));
   }
 );
 
@@ -147,7 +147,7 @@ loansRoute.get(
       if (userVault) {
         const loan = getLoanFromUserVault(userVault, pythPrices);
         response.send(loan);
-        await redis.saveWithExpiry(key, loan, LOANS_EXPIRY_IN_SECONDS);
+        await redis.saveAsJsonWithExpiry(key, loan, LOANS_EXPIRY_IN_SECONDS);
       } else {
         response.status(notFound).send(`Could not get loan for public key: ${request.params.pubkey}`);
       }

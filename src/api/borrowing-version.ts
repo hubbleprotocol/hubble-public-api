@@ -49,7 +49,7 @@ borrowingVersionRoute.get(
       }
       const res = { version: borrowingVersion };
       response.send(res);
-      await redis.saveWithExpiry(parameterName, res, BORROWING_VERSION_EXPIRY_IN_SECONDS);
+      await redis.saveAsJsonWithExpiry(parameterName, res, BORROWING_VERSION_EXPIRY_IN_SECONDS);
     } else {
       const err = 'Could not get borrowing version value from AWS';
       logger.error(err);

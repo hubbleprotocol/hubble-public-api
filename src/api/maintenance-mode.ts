@@ -49,7 +49,7 @@ maintenanceModeRoute.get(
       }
       const res = { enabled: maintenanceModeNumber > 0 };
       response.send(res);
-      await redis.saveWithExpiry(parameterName, res, MAINTENANCE_MODE_EXPIRY_IN_SECONDS);
+      await redis.saveAsJsonWithExpiry(parameterName, res, MAINTENANCE_MODE_EXPIRY_IN_SECONDS);
     } else {
       const err = 'Could not get maintenance mode value from AWS';
       logger.error(err);

@@ -63,7 +63,7 @@ export async function getMetrics(env: ENV) {
   let metrics = await redis.getAndParseKey<MetricsResponse>(key);
   if (!metrics) {
     metrics = await fetchMetrics(env, bins);
-    await redis.saveWithExpiry(key, metrics, METRICS_EXPIRY_IN_SECONDS);
+    await redis.saveAsJsonWithExpiry(key, metrics, METRICS_EXPIRY_IN_SECONDS);
   }
   return metrics;
 }
