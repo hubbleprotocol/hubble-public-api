@@ -98,16 +98,16 @@ loansRoute.get(
 
     const redis = RedisProvider.getInstance();
     const key = getLoanHistoryRedisKey(loan, env);
-    const expireAt = new Date();
-    expireAt.setHours(expireAt.getHours() + 1);
-    expireAt.setMinutes(1);
-    expireAt.setSeconds(0);
     let history = await redis.getAndParseKey<LoanHistoryResponse[]>(key);
     if (history) {
       sendFilteredHistory(history, fromEpoch, toEpoch, response);
     } else {
       history = await getLoanHistory(loan, env);
       sendFilteredHistory(history, fromEpoch, toEpoch, response);
+      const expireAt = new Date();
+      expireAt.setHours(expireAt.getHours() + 1);
+      expireAt.setMinutes(1);
+      expireAt.setSeconds(0);
       await redis.saveAsJsonWithExpiryAt(key, history, dateToUnixSeconds(expireAt));
     }
   }
