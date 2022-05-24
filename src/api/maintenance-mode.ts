@@ -9,6 +9,7 @@ import { Request } from 'express';
 import Router from 'express-promise-router';
 import logger from '../services/logger';
 import RedisProvider from '../services/redis/redis';
+import { MAINTENANCE_MODE_EXPIRY_IN_SECONDS } from '../constants/redis';
 
 const awsEnv = getAwsEnvironmentVariables();
 
@@ -48,7 +49,7 @@ maintenanceModeRoute.get(
       }
       const res = { enabled: maintenanceModeNumber > 0 };
       response.send(res);
-      await redis.saveWithExpiry(parameterName, res, 60);
+      await redis.saveWithExpiry(parameterName, res, MAINTENANCE_MODE_EXPIRY_IN_SECONDS);
     } else {
       const err = 'Could not get maintenance mode value from AWS';
       logger.error(err);
