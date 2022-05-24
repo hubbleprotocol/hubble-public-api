@@ -38,6 +38,9 @@ service-base-chart:
   readinessProbe:
     path: /health
 
+  autoscaling:
+    targetCPUUtilizationPercentage: 60
+
   envVars:
     - name: SERVER_PORT
       value: "80"
