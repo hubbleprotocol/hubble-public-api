@@ -60,7 +60,7 @@
     "express": "^4.17.3",
     "express-promise-router": "^4.1.1",
     "hdr-histogram-js": "^3.0.0",
-    "ioredis": "^4.28.5",
+    "ioredis": "^5.0.5",
     "jsbi": "^4.1.0",
     "knex": "^1.0.4",
     "morgan": "^1.10.0",

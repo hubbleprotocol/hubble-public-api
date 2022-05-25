@@ -3,7 +3,7 @@ import { getRedisEnvironmentVariables } from '../environmentService';
 import Redis from 'ioredis';
 
 class RedisProvider {
-  private readonly _client: Redis.Redis;
+  private readonly _client: Redis;
 
   constructor() {
     const { REDIS_HOST, REDIS_PORT } = getRedisEnvironmentVariables();
@@ -21,7 +21,7 @@ class RedisProvider {
     );
   }
 
-  get client(): Redis.Redis {
+  get client(): Redis {
     return this._client;
   }
 
