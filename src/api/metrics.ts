@@ -31,10 +31,11 @@ import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import redis from '../services/redis/redis';
 import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
 import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
-import { getMetricsRedisKey } from '../services/redis/keyProvider';
+import { getMetricsLockKey, getMetricsRedisKey } from '../services/redis/keyProvider';
 import { METRICS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
 import { internalError } from '../utils/apiUtils';
+import Redlock from 'redlock';
 
 /**
  * Get live Hubble on-chain metrics data
@@ -44,13 +45,16 @@ metricsRoute.get(
   '/',
   async (request: Request<never, MetricsResponse | string, never, EnvironmentQueryParams>, response) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
-    try {
-      let metrics = await getMetrics(env);
-      response.send(metrics);
-    } catch (e) {
-      logger.error(e);
-      response.status(internalError).send('Could not get metrics');
-    }
+    const redlock = new Redlock([redis.client]);
+    await redlock.using([getMetricsLockKey(env)], 10000, async (signal) => {
+      try {
+        let metrics = await getMetrics(env);
+        response.send(metrics);
+      } catch (e) {
+        logger.error(e);
+        response.status(internalError).send('Could not get metrics');
+      }
+    });
   }
 );
 
