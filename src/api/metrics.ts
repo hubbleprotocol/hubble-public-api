@@ -69,7 +69,7 @@ export async function getMetrics(env: ENV) {
       metrics = await redis.getAndParseKey<MetricsResponse>(key);
       if (!metrics) {
         const redlock = new Redlock([redis.client]);
-        await redlock.using([metricsLockKey], 10_000, async () => {
+        await redlock.using([metricsLockKey], 10_000, { retryCount: -1 }, async () => {
           metrics = await redis.getAndParseKey<MetricsResponse>(key);
           if (!metrics) {
             metrics = await fetchMetrics(env, bins);
