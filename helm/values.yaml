@@ -98,7 +98,7 @@ service-base-chart:
     POSTGRES_CONNECTION_STRING: # example: postgres://user:pass@host:5432/dbName
 
 redis:
-  architecture: standalone
+  architecture: replication
   fullnameOverride: redis-hubble-public-api
   master:
     extraFlags:
