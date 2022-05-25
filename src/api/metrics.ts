@@ -45,16 +45,13 @@ metricsRoute.get(
   '/',
   async (request: Request<never, MetricsResponse | string, never, EnvironmentQueryParams>, response) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
-    const redlock = new Redlock([redis.client]);
-    await redlock.using([getMetricsLockKey(env)], 10000, async (signal) => {
-      try {
-        let metrics = await getMetrics(env);
-        response.send(metrics);
-      } catch (e) {
-        logger.error(e);
-        response.status(internalError).send('Could not get metrics');
-      }
-    });
+    try {
+      let metrics = await getMetrics(env);
+      response.send(metrics);
+    } catch (e) {
+      logger.error(e);
+      response.status(internalError).send('Could not get metrics');
+    }
   }
 );
 
@@ -65,10 +62,16 @@ export async function getMetrics(env: ENV) {
   const key = getMetricsRedisKey(env);
   let metrics = await redis.getAndParseKey<MetricsResponse>(key);
   if (!metrics) {
-    metrics = await fetchMetrics(env, bins);
-    await redis.saveAsJsonWithExpiry(key, metrics, METRICS_EXPIRY_IN_SECONDS);
+    const redlock = new Redlock([redis.client]);
+    await redlock.using([getMetricsLockKey(env)], 10000, async (signal) => {
+      metrics = await redis.getAndParseKey<MetricsResponse>(key);
+      if (!metrics) {
+        metrics = await fetchMetrics(env, bins);
+        await redis.saveAsJsonWithExpiry(key, metrics, METRICS_EXPIRY_IN_SECONDS);
+      }
+    });
   }
-  return metrics;
+  return metrics!;
 }
 
 async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResponse> {
