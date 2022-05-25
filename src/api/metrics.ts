@@ -36,6 +36,7 @@ import { METRICS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
 import { internalError } from '../utils/apiUtils';
 import Redlock from 'redlock';
+import AsyncLock from 'async-lock'
 
 /**
  * Get live Hubble on-chain metrics data
@@ -62,14 +63,21 @@ export async function getMetrics(env: ENV) {
   const key = getMetricsRedisKey(env);
   let metrics = await redis.getAndParseKey<MetricsResponse>(key);
   if (!metrics) {
-    const redlock = new Redlock([redis.client]);
-    await redlock.using([getMetricsLockKey(env)], 10000, async (signal) => {
+    const lock = new AsyncLock({ timeout: 15_000 });
+    const metricsLockKey = getMetricsLockKey(env);
+    await lock.acquire(metricsLockKey, async () => {
       metrics = await redis.getAndParseKey<MetricsResponse>(key);
       if (!metrics) {
-        metrics = await fetchMetrics(env, bins);
-        await redis.saveAsJsonWithExpiry(key, metrics, METRICS_EXPIRY_IN_SECONDS);
+        const redlock = new Redlock([redis.client]);
+        await redlock.using([metricsLockKey], 10_000, async () => {
+          metrics = await redis.getAndParseKey<MetricsResponse>(key);
+          if (!metrics) {
+            metrics = await fetchMetrics(env, bins);
+            await redis.saveAsJsonWithExpiry(key, metrics, METRICS_EXPIRY_IN_SECONDS);
+          }
+        });
       }
-    });
+    })
   }
   return metrics!;
 }
