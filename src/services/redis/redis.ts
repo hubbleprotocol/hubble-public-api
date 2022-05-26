@@ -46,12 +46,12 @@ class RedisProvider {
     }
   }
 
-  async getAndParseKey<T>(key: string): Promise<T | undefined> {
+  async getAndParseKey<T>(key: string): Promise<T | null> {
     const value = await this._client.get(key);
     if (value) {
       return JSON.parse(value) as T;
     }
-    return undefined;
+    return null;
   }
 
   async getKey<T>(key: string): Promise<string | null> {
@@ -78,18 +78,28 @@ class RedisProvider {
     return this._client.multi().setnx(key, value).expire(key, expireAt).exec();
   }
 
-  async cacheFetch<T>(key: string, fetch: () => T | PromiseLike<T>, options: CacheFetchOptions): Promise<T> {
-    let value = await this.getAndParseKey<T>(key);
-    if (value === undefined) {
-      const distributedLockKey = `lock-${key}`;
+  async cacheFetch(key: string, fetch: () => PromiseLike<string>, options: CacheFetchOptions): Promise<string> {
+    return this.saveWithMutex(key, (s) => this.getKey(s), fetch, (key, val, exp) => this.saveWithExpiry(key, val, exp), options);
+  }
+
+  async cacheFetchJson<T>(key: string, fetch: () => PromiseLike<T>, options: CacheFetchOptions): Promise<T> {
+    return this.saveWithMutex(key, (s) => this.getAndParseKey(s), fetch, (key, val, exp) => this.saveAsJsonWithExpiry(key, val, exp), options);
+  }
+
+  private async saveWithMutex<T>(key: string, get: (key: string) => PromiseLike<T | null>, fetch: () => PromiseLike<T>, save: (key: string, value: T, expiry: number) => PromiseLike<any>, options: CacheFetchOptions): Promise<T> {
+    let value = await get(key);
+    if (value === undefined || value === null) {
+      const distributedLockKey = `mutex-${key}`;
       await this._localMutex.acquire(distributedLockKey, async () => {
-        value = await this.getAndParseKey<T>(key);
-        if (value === undefined) {
+        value = await get(key);
+        if (value === undefined || value === null) {
           await this._redlock.using([distributedLockKey], options.outerLockTimeoutMillis || 10_000, async () => {
-            value = await this.getAndParseKey<T>(key);
-            if (value === undefined) {
+            value = await get(key);
+            if (value === undefined || value === null) {
               value = await fetch();
-              await this.saveAsJsonWithExpiry(key, value, options.cacheExpirySeconds);
+              if (value !== undefined && value !== null) {
+                await save(key, value, options.cacheExpirySeconds);
+              }
             }
           });
         }

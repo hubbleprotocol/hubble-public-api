@@ -35,11 +35,11 @@ export default maintenanceModeRoute;
 
 export async function getMaintenanceMode(env: ENV): Promise<MaintenanceModeResponse> {
   const parameterName = getMaintenanceModeParameterName(env);
-  const maintenanceModeNumber = await redis.cacheFetch(parameterName, () => fetchMaintenanceMode(parameterName), { cacheExpirySeconds: MAINTENANCE_MODE_EXPIRY_IN_SECONDS });
-  return { enabled: maintenanceModeNumber > 0 }
+  const maintenanceMode = await redis.cacheFetch(parameterName, () => fetchMaintenanceMode(parameterName), { cacheExpirySeconds: MAINTENANCE_MODE_EXPIRY_IN_SECONDS });
+  return { enabled: parseInt(maintenanceMode) > 0 }
 }
 
-export async function fetchMaintenanceMode(parameterName: string): Promise<number> {
+export async function fetchMaintenanceMode(parameterName: string): Promise<string> {
   const parameter = await getParameter(
     parameterName,
     awsEnv.AWS_ACCESS_KEY_ID,
@@ -52,7 +52,7 @@ export async function fetchMaintenanceMode(parameterName: string): Promise<numbe
     if (isNaN(maintenanceModeNumber)) {
       throw Error(`Could not parse maintenance mode value from AWS for parameter: ${parameterName} (has to be number). Current value: ${maintenanceParameterValue}`);
     }
-    return maintenanceModeNumber;
+    return maintenanceParameterValue;
   }
   throw Error(`No maintenance mode value returned from AWS for parameter: ${parameterName}`);
 }

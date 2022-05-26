@@ -36,10 +36,10 @@ export default borrowingVersionRoute;
 export async function getBorrowingVersion(env: ENV): Promise<BorrowingVersionResponse> {
   const parameterName = getBorrowingVersionParameterName(env);
   const version = await redis.cacheFetch(parameterName, () => fetchBorrowingVersion(parameterName), { cacheExpirySeconds: BORROWING_VERSION_EXPIRY_IN_SECONDS });
-  return { version }
+  return { version: parseInt(version) }
 }
 
-export async function fetchBorrowingVersion(parameterName: string): Promise<number> {
+export async function fetchBorrowingVersion(parameterName: string): Promise<string> {
   const parameter = await getParameter(
     parameterName,
     awsEnv.AWS_ACCESS_KEY_ID,
@@ -52,7 +52,7 @@ export async function fetchBorrowingVersion(parameterName: string): Promise<numb
     if (isNaN(borrowingVersion)) {
       throw Error(`Could not parse borrowing version value from AWS for parameter: ${parameterName} (has to be number). Current value: ${borrowingVersionValue}`);
     }
-    return borrowingVersion;
+    return borrowingVersionValue;
   }
   throw Error(`No borrowing version value returned from AWS for parameter: ${parameterName}`);
 }
