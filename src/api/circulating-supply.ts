@@ -28,7 +28,7 @@ export default circulatingSupplyRoute;
 
 export async function getCirculatingSupply(env: ENV): Promise<string> {
   const key = getCirculatingSupplyRedisKey(env);
-  return redis.cacheFetch(key, () => fetchCirculatingSupply(env), { cacheExpiry: METRICS_EXPIRY_IN_SECONDS });
+  return redis.cacheFetch(key, () => fetchCirculatingSupply(env), { cacheExpirySeconds: METRICS_EXPIRY_IN_SECONDS });
 }
 
 export async function fetchCirculatingSupply(env: ENV): Promise<string> {

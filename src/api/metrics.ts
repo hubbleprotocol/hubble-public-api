@@ -59,7 +59,7 @@ export default metricsRoute;
 export async function getMetrics(env: ENV): Promise<MetricsResponse> {
   const bins = 20;
   const key = getMetricsRedisKey(env);
-  return await redis.cacheFetch(key, () => fetchMetrics(env, bins), { cacheExpiry: METRICS_EXPIRY_IN_SECONDS });
+  return await redis.cacheFetch(key, () => fetchMetrics(env, bins), { cacheExpirySeconds: METRICS_EXPIRY_IN_SECONDS });
 }
 
 async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResponse> {

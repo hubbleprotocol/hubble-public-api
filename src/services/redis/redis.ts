@@ -5,9 +5,9 @@ import AsyncLock from "async-lock";
 import Redlock from "redlock";
 
 export type CacheFetchOptions = {
-  outerLockTimeout?: number,
-  innerLockTimeout?: number,
-  cacheExpiry: number,
+  outerLockTimeoutMillis?: number,
+  innerLockTimeoutMillis?: number,
+  cacheExpirySeconds: number,
 }
 
 class RedisProvider {
@@ -85,15 +85,15 @@ class RedisProvider {
       await this._localMutex.acquire(distributedLockKey, async () => {
         value = await this.getAndParseKey<T>(key);
         if (!value) {
-          await this._redlock.using([distributedLockKey], options.outerLockTimeout || 10_000, async () => {
+          await this._redlock.using([distributedLockKey], options.outerLockTimeoutMillis || 10_000, async () => {
             value = await this.getAndParseKey<T>(key);
             if (!value) {
               value = await fetch();
-              await this.saveAsJsonWithExpiry(key, value, options.cacheExpiry);
+              await this.saveAsJsonWithExpiry(key, value, options.cacheExpirySeconds);
             }
           });
         }
-      }, { timeout: options.innerLockTimeout || 15_000 })
+      }, { timeout: options.innerLockTimeoutMillis || 15_000 })
     }
     return value!
   }

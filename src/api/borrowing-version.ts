@@ -35,7 +35,7 @@ export default borrowingVersionRoute;
 
 export async function getBorrowingVersion(env: ENV): Promise<BorrowingVersionResponse> {
   const parameterName = getBorrowingVersionParameterName(env);
-  const version = await redis.cacheFetch(parameterName, () => fetchBorrowingVersion(parameterName), { cacheExpiry: BORROWING_VERSION_EXPIRY_IN_SECONDS });
+  const version = await redis.cacheFetch(parameterName, () => fetchBorrowingVersion(parameterName), { cacheExpirySeconds: BORROWING_VERSION_EXPIRY_IN_SECONDS });
   return { version }
 }
 
