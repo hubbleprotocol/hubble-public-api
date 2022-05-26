@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - master
+      - 'release/**'
+  pull_request:
+    branches:
+      - master
+      - 'release/**'
 
 jobs:
   build_docker:
@@ -67,6 +72,7 @@ jobs:
             "CHART=hubble-public-api"
             "BUILD_VERSION=${{ needs.build_docker.outputs.build_version }}"
   pre_release:
+    if: ${{ github.ref == 'refs/heads/master' }}
     needs:
       - build_docker
       - build_helm
