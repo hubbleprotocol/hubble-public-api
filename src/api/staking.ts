@@ -33,7 +33,7 @@ stakingRoute.get(
       if (staking) {
         response.send(staking);
       } else {
-        staking = await fetchStaking(env, web3Client, response);
+        staking = await fetchStaking(env, web3Client, response) || null;
         if (staking) {
           await redis.saveAsJsonWithExpiry(redisKey, staking, STAKING_STATS_EXPIRY_IN_SECONDS);
           response.send(staking);

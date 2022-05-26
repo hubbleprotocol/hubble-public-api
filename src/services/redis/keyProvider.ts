@@ -37,10 +37,6 @@ export function getMetricsRedisKey(env: ENV) {
   return `metrics-${env}`;
 }
 
-export function getMetricsLockKey(env: ENV) {
-  return `metrics-lock-${env}`;
-}
-
 export function getOwnerRedisKey(owner: PublicKey, env: ENV) {
   return `owner-${env}-${owner.toString()}`;
 }

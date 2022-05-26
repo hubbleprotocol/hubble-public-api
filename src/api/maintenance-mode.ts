@@ -1,4 +1,4 @@
-import { badGateway, internalError } from '../utils/apiUtils';
+import { internalError } from '../utils/apiUtils';
 import { ENV } from '../services/web3/client';
 import { getParameter } from '../utils/awsUtils';
 import { getMaintenanceModeParameterName } from '../constants/hubble';
@@ -20,41 +20,39 @@ const maintenanceModeRoute = Router();
 maintenanceModeRoute.get(
   '/',
   async (request: Request<never, MaintenanceModeResponse | string, never, EnvironmentQueryParams>, response) => {
-    let env: ENV = 'mainnet-beta';
-    if (request.query.env) {
-      env = request.query.env;
-    }
-    const parameterName = getMaintenanceModeParameterName(env);
-    const cached = await redis.getAndParseKey<MaintenanceModeResponse>(parameterName);
-    if (cached) {
-      response.send(cached);
-      return;
-    }
-
-    const parameter = await getParameter(
-      parameterName,
-      awsEnv.AWS_ACCESS_KEY_ID,
-      awsEnv.AWS_SECRET_ACCESS_KEY,
-      awsEnv.AWS_REGION
-    );
-    const maintenanceParameterValue = parameter.Parameter?.Value;
-    if (maintenanceParameterValue) {
-      const maintenanceModeNumber = parseInt(maintenanceParameterValue);
-      if (isNaN(maintenanceModeNumber)) {
-        const err = `Could not parse maintenance mode value from AWS (has to be number): ${maintenanceParameterValue}`;
-        logger.error(err);
-        response.status(internalError).send(err);
-        return;
-      }
-      const res = { enabled: maintenanceModeNumber > 0 };
-      response.send(res);
-      await redis.saveAsJsonWithExpiry(parameterName, res, MAINTENANCE_MODE_EXPIRY_IN_SECONDS);
-    } else {
-      const err = 'Could not get maintenance mode value from AWS';
-      logger.error(err);
-      response.status(badGateway).send(err);
+    const env: ENV = request.query.env ?? 'mainnet-beta';
+    try {
+      const maintenanceMode = await getMaintenanceMode(env);
+      response.send(maintenanceMode);
+    } catch (e) {
+      logger.error(e);
+      response.status(internalError).send('Could not get maintenance mode');
     }
   }
 );
 
 export default maintenanceModeRoute;
+
+export async function getMaintenanceMode(env: ENV): Promise<MaintenanceModeResponse> {
+  const parameterName = getMaintenanceModeParameterName(env);
+  const maintenanceMode = await redis.cacheFetch(parameterName, () => fetchMaintenanceMode(parameterName), { cacheExpirySeconds: MAINTENANCE_MODE_EXPIRY_IN_SECONDS });
+  return { enabled: parseInt(maintenanceMode) > 0 }
+}
+
+export async function fetchMaintenanceMode(parameterName: string): Promise<string> {
+  const parameter = await getParameter(
+    parameterName,
+    awsEnv.AWS_ACCESS_KEY_ID,
+    awsEnv.AWS_SECRET_ACCESS_KEY,
+    awsEnv.AWS_REGION
+  );
+  const maintenanceParameterValue = parameter.Parameter?.Value;
+  if (maintenanceParameterValue) {
+    const maintenanceModeNumber = parseInt(maintenanceParameterValue);
+    if (isNaN(maintenanceModeNumber)) {
+      throw Error(`Could not parse maintenance mode value from AWS for parameter: ${parameterName} (has to be number). Current value: ${maintenanceParameterValue}`);
+    }
+    return maintenanceParameterValue;
+  }
+  throw Error(`No maintenance mode value returned from AWS for parameter: ${parameterName}`);
+}

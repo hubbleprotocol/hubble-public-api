@@ -1,4 +1,4 @@
-import { badGateway, internalError } from '../utils/apiUtils';
+import { internalError } from '../utils/apiUtils';
 import Router from 'express-promise-router';
 import { Request } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
@@ -20,41 +20,39 @@ const borrowingVersionRoute = Router();
 borrowingVersionRoute.get(
   '/',
   async (request: Request<never, string | BorrowingVersionResponse, never, EnvironmentQueryParams>, response) => {
-    let env: ENV = 'mainnet-beta';
-    if (request.query.env) {
-      env = request.query.env;
-    }
-
-    const parameterName = getBorrowingVersionParameterName(env);
-    const cached = await redis.getAndParseKey<BorrowingVersionResponse>(parameterName);
-    if (cached) {
-      response.send(cached);
-      return;
-    }
-    const parameter = await getParameter(
-      parameterName,
-      awsEnv.AWS_ACCESS_KEY_ID,
-      awsEnv.AWS_SECRET_ACCESS_KEY,
-      awsEnv.AWS_REGION
-    );
-    const borrowingVersionValue = parameter.Parameter?.Value;
-    if (borrowingVersionValue) {
-      const borrowingVersion = parseInt(borrowingVersionValue);
-      if (isNaN(borrowingVersion)) {
-        const err = `Could not parse borrowing version value from AWS (has to be number): ${borrowingVersionValue}`;
-        logger.error(err);
-        response.status(internalError).send(err);
-        return;
-      }
-      const res = { version: borrowingVersion };
-      response.send(res);
-      await redis.saveAsJsonWithExpiry(parameterName, res, BORROWING_VERSION_EXPIRY_IN_SECONDS);
-    } else {
-      const err = 'Could not get borrowing version value from AWS';
-      logger.error(err);
-      response.status(badGateway).send(err);
+    const env: ENV = request.query.env ?? 'mainnet-beta';
+    try {
+      const borrowingVersion = await getBorrowingVersion(env);
+      response.send(borrowingVersion);
+    } catch (e) {
+      logger.error(e);
+      response.status(internalError).send('Could not get borrowing version');
     }
   }
 );
 
 export default borrowingVersionRoute;
+
+export async function getBorrowingVersion(env: ENV): Promise<BorrowingVersionResponse> {
+  const parameterName = getBorrowingVersionParameterName(env);
+  const version = await redis.cacheFetch(parameterName, () => fetchBorrowingVersion(parameterName), { cacheExpirySeconds: BORROWING_VERSION_EXPIRY_IN_SECONDS });
+  return { version: parseInt(version) }
+}
+
+export async function fetchBorrowingVersion(parameterName: string): Promise<string> {
+  const parameter = await getParameter(
+    parameterName,
+    awsEnv.AWS_ACCESS_KEY_ID,
+    awsEnv.AWS_SECRET_ACCESS_KEY,
+    awsEnv.AWS_REGION
+  );
+  const borrowingVersionValue = parameter.Parameter?.Value;
+  if (borrowingVersionValue) {
+    const borrowingVersion = parseInt(borrowingVersionValue);
+    if (isNaN(borrowingVersion)) {
+      throw Error(`Could not parse borrowing version value from AWS for parameter: ${parameterName} (has to be number). Current value: ${borrowingVersionValue}`);
+    }
+    return borrowingVersionValue;
+  }
+  throw Error(`No borrowing version value returned from AWS for parameter: ${parameterName}`);
+}

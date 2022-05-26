@@ -31,12 +31,10 @@ import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import redis from '../services/redis/redis';
 import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
 import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
-import { getMetricsLockKey, getMetricsRedisKey } from '../services/redis/keyProvider';
+import { getMetricsRedisKey } from '../services/redis/keyProvider';
 import { METRICS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
 import { internalError } from '../utils/apiUtils';
-import Redlock from 'redlock';
-import AsyncLock from 'async-lock'
 
 /**
  * Get live Hubble on-chain metrics data
@@ -45,9 +43,9 @@ const metricsRoute = Router();
 metricsRoute.get(
   '/',
   async (request: Request<never, MetricsResponse | string, never, EnvironmentQueryParams>, response) => {
-    let env: ENV = request.query.env ?? 'mainnet-beta';
+    const env: ENV = request.query.env ?? 'mainnet-beta';
     try {
-      let metrics = await getMetrics(env);
+      const metrics = await getMetrics(env);
       response.send(metrics);
     } catch (e) {
       logger.error(e);
@@ -58,28 +56,10 @@ metricsRoute.get(
 
 export default metricsRoute;
 
-export async function getMetrics(env: ENV) {
+export async function getMetrics(env: ENV): Promise<MetricsResponse> {
   const bins = 20;
   const key = getMetricsRedisKey(env);
-  let metrics = await redis.getAndParseKey<MetricsResponse>(key);
-  if (!metrics) {
-    const lock = new AsyncLock({ timeout: 15_000 });
-    const metricsLockKey = getMetricsLockKey(env);
-    await lock.acquire(metricsLockKey, async () => {
-      metrics = await redis.getAndParseKey<MetricsResponse>(key);
-      if (!metrics) {
-        const redlock = new Redlock([redis.client]);
-        await redlock.using([metricsLockKey], 10_000, { retryCount: -1 }, async () => {
-          metrics = await redis.getAndParseKey<MetricsResponse>(key);
-          if (!metrics) {
-            metrics = await fetchMetrics(env, bins);
-            await redis.saveAsJsonWithExpiry(key, metrics, METRICS_EXPIRY_IN_SECONDS);
-          }
-        });
-      }
-    })
-  }
-  return metrics!;
+  return await redis.cacheFetchJson(key, () => fetchMetrics(env, bins), { cacheExpirySeconds: METRICS_EXPIRY_IN_SECONDS });
 }
 
 async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResponse> {

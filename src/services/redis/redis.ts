@@ -1,9 +1,19 @@
 import logger from '../logger';
 import { getRedisEnvironmentVariables } from '../environmentService';
 import Redis from 'ioredis';
+import AsyncLock from "async-lock";
+import Redlock from "redlock";
+
+export type CacheFetchOptions = {
+  outerLockTimeoutMillis?: number,
+  innerLockTimeoutMillis?: number,
+  cacheExpirySeconds: number,
+}
 
 class RedisProvider {
   private readonly _client: Redis;
+  private readonly _localMutex: AsyncLock;
+  private readonly _redlock: Redlock;
 
   constructor() {
     const { REDIS_HOST, REDIS_PORT } = getRedisEnvironmentVariables();
@@ -19,6 +29,8 @@ class RedisProvider {
     this._client.on('error', (err) =>
       logger.warn({ message: 'redis client error', error: err, REDIS_HOST, REDIS_PORT })
     );
+    this._localMutex = new AsyncLock();
+    this._redlock = new Redlock([this._client], { retryCount: -1 });
   }
 
   get client(): Redis {
@@ -34,12 +46,12 @@ class RedisProvider {
     }
   }
 
-  async getAndParseKey<T>(key: string): Promise<T | undefined> {
+  async getAndParseKey<T>(key: string): Promise<T | null> {
     const value = await this._client.get(key);
     if (value) {
       return JSON.parse(value) as T;
     }
-    return undefined;
+    return null;
   }
 
   async getKey<T>(key: string): Promise<string | null> {
@@ -64,6 +76,36 @@ class RedisProvider {
   saveWithExpireAt(key: string, value: string, expireAt: number) {
     logger.info({ message: 'saving key to redis', key, expireAt });
     return this._client.multi().setnx(key, value).expire(key, expireAt).exec();
+  }
+
+  async cacheFetch(key: string, fetch: () => PromiseLike<string>, options: CacheFetchOptions): Promise<string> {
+    return this.saveWithMutex(key, (s) => this.getKey(s), fetch, (key, val, exp) => this.saveWithExpiry(key, val, exp), options);
+  }
+
+  async cacheFetchJson<T>(key: string, fetch: () => PromiseLike<T>, options: CacheFetchOptions): Promise<T> {
+    return this.saveWithMutex(key, (s) => this.getAndParseKey(s), fetch, (key, val, exp) => this.saveAsJsonWithExpiry(key, val, exp), options);
+  }
+
+  private async saveWithMutex<T>(key: string, get: (key: string) => PromiseLike<T | null>, fetch: () => PromiseLike<T>, save: (key: string, value: T, expiry: number) => PromiseLike<any>, options: CacheFetchOptions): Promise<T> {
+    let value = await get(key);
+    if (value === undefined || value === null) {
+      const distributedLockKey = `mutex-${key}`;
+      await this._localMutex.acquire(distributedLockKey, async () => {
+        value = await get(key);
+        if (value === undefined || value === null) {
+          await this._redlock.using([distributedLockKey], options.outerLockTimeoutMillis || 10_000, async () => {
+            value = await get(key);
+            if (value === undefined || value === null) {
+              value = await fetch();
+              if (value !== undefined && value !== null) {
+                await save(key, value, options.cacheExpirySeconds);
+              }
+            }
+          });
+        }
+      }, { timeout: options.innerLockTimeoutMillis || 15_000 })
+    }
+    return value!
   }
 }
 
