@@ -1,9 +1,19 @@
 import logger from '../logger';
 import { getRedisEnvironmentVariables } from '../environmentService';
 import Redis from 'ioredis';
+import AsyncLock from "async-lock";
+import Redlock from "redlock";
+
+export type CacheFetchOptions = {
+  outerLockTimeout?: number,
+  innerLockTimeout?: number,
+  cacheExpiry: number,
+}
 
 class RedisProvider {
   private readonly _client: Redis;
+  private readonly _localMutex: AsyncLock;
+  private readonly _redlock: Redlock;
 
   constructor() {
     const { REDIS_HOST, REDIS_PORT } = getRedisEnvironmentVariables();
@@ -19,6 +29,8 @@ class RedisProvider {
     this._client.on('error', (err) =>
       logger.warn({ message: 'redis client error', error: err, REDIS_HOST, REDIS_PORT })
     );
+    this._localMutex = new AsyncLock();
+    this._redlock = new Redlock([this._client], { retryCount: -1 });
   }
 
   get client(): Redis {
@@ -64,6 +76,26 @@ class RedisProvider {
   saveWithExpireAt(key: string, value: string, expireAt: number) {
     logger.info({ message: 'saving key to redis', key, expireAt });
     return this._client.multi().setnx(key, value).expire(key, expireAt).exec();
+  }
+
+  async cacheFetch<T>(key: string, fetch: () => T | PromiseLike<T>, options: CacheFetchOptions): Promise<T> {
+    let value = await this.getAndParseKey<T>(key);
+    if (!value) {
+      const distributedLockKey = `lock-${key}`;
+      await this._localMutex.acquire(distributedLockKey, async () => {
+        value = await this.getAndParseKey<T>(key);
+        if (!value) {
+          await this._redlock.using([distributedLockKey], options.outerLockTimeout || 10_000, async () => {
+            value = await this.getAndParseKey<T>(key);
+            if (!value) {
+              value = await fetch();
+              await this.saveAsJsonWithExpiry(key, value, options.cacheExpiry);
+            }
+          });
+        }
+      }, { timeout: options.innerLockTimeout || 15_000 })
+    }
+    return value!
   }
 }
 
