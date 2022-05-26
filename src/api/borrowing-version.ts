@@ -20,7 +20,7 @@ const borrowingVersionRoute = Router();
 borrowingVersionRoute.get(
   '/',
   async (request: Request<never, string | BorrowingVersionResponse, never, EnvironmentQueryParams>, response) => {
-    let env: ENV = request.query.env ?? 'mainnet-beta';
+    const env: ENV = request.query.env ?? 'mainnet-beta';
     try {
       const borrowingVersion = await getBorrowingVersion(env);
       response.send(borrowingVersion);
@@ -50,7 +50,7 @@ export async function fetchBorrowingVersion(parameterName: string): Promise<numb
   if (borrowingVersionValue) {
     const borrowingVersion = parseInt(borrowingVersionValue);
     if (isNaN(borrowingVersion)) {
-      throw Error(`Could not parse borrowing version value from AWS (has to be number): ${borrowingVersionValue}`);
+      throw Error(`Could not parse borrowing version value from AWS for parameter: ${parameterName} (has to be number). Current value: ${borrowingVersionValue}`);
     }
     return borrowingVersion;
   }

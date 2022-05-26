@@ -80,14 +80,14 @@ class RedisProvider {
 
   async cacheFetch<T>(key: string, fetch: () => T | PromiseLike<T>, options: CacheFetchOptions): Promise<T> {
     let value = await this.getAndParseKey<T>(key);
-    if (!value) {
+    if (value === undefined) {
       const distributedLockKey = `lock-${key}`;
       await this._localMutex.acquire(distributedLockKey, async () => {
         value = await this.getAndParseKey<T>(key);
-        if (!value) {
+        if (value === undefined) {
           await this._redlock.using([distributedLockKey], options.outerLockTimeoutMillis || 10_000, async () => {
             value = await this.getAndParseKey<T>(key);
-            if (!value) {
+            if (value === undefined) {
               value = await fetch();
               await this.saveAsJsonWithExpiry(key, value, options.cacheExpirySeconds);
             }

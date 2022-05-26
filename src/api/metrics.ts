@@ -43,9 +43,9 @@ const metricsRoute = Router();
 metricsRoute.get(
   '/',
   async (request: Request<never, MetricsResponse | string, never, EnvironmentQueryParams>, response) => {
-    let env: ENV = request.query.env ?? 'mainnet-beta';
+    const env: ENV = request.query.env ?? 'mainnet-beta';
     try {
-      let metrics = await getMetrics(env);
+      const metrics = await getMetrics(env);
       response.send(metrics);
     } catch (e) {
       logger.error(e);

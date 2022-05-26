@@ -18,9 +18,9 @@ const circulatingSupplyValueRoute = Router();
 circulatingSupplyValueRoute.get(
   '/',
   async (request: Request<never, string, never, EnvironmentQueryParams>, response) => {
-    let env: ENV = request.query.env ?? 'mainnet-beta';
+    const env: ENV = request.query.env ?? 'mainnet-beta';
     try {
-      let circulatingSupplyValue = await getCirculatingSupplyValue(env);
+      const circulatingSupplyValue = await getCirculatingSupplyValue(env);
       response.send(circulatingSupplyValue);
     } catch (e) {
       logger.error(e);
