@@ -1,0 +1,479 @@
+{
+	"info": {
+		"_postman_id": "008f8846-ef1a-449b-a915-90c9e75fcc96",
+		"name": "[local] Hubble Public API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "GET version",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/version",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"version"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET borrowing version",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/borrowing-version",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"borrowing-version"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET history",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/history",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"history"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET health",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET metrics",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/metrics",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"metrics"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET all loans",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/loans?env=mainnet-beta&includeJsonResponse",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"loans"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						},
+						{
+							"key": "env",
+							"value": "mainnet-beta"
+						},
+						{
+							"key": "includeJsonResponse",
+							"value": null
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET specific loan",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/loans/3X3iR9XYoDVXGnLcYcMfzYDmvR1J8zvAUxy4172j4fAT",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"loans",
+						"3X3iR9XYoDVXGnLcYcMfzYDmvR1J8zvAUxy4172j4fAT"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET circulating supply",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/circulating-supply",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"circulating-supply"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET circulating supply value",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/circulating-supply-value",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"circulating-supply-value"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET config",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/config",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"config"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET health",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"health"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET idl",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/idl",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"idl"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET owner loans",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/owners/FUx8qvro7ujGJZnckBDU5yvzws26MAsq5GdnSNLXZHiG/loans",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"owners",
+						"FUx8qvro7ujGJZnckBDU5yvzws26MAsq5GdnSNLXZHiG",
+						"loans"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET maintenance mode",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/maintenance-mode",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"maintenance-mode"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET staking",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/staking",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"staking"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET staking usdh users",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/staking/usdh/users",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"staking",
+						"usdh",
+						"users"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET staking hbb users",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8888/staking/hbb/users",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8888",
+					"path": [
+						"staking",
+						"hbb",
+						"users"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
