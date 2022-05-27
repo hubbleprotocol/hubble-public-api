@@ -1,0 +1,496 @@
+{
+	"info": {
+		"_postman_id": "8be1a8bd-463b-4038-ba11-1ed358c44aff",
+		"name": "[prod] Hubble Public API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "GET version",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://api.hubbleprotocol.io/version",
+					"protocol": "https",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"version"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET borrowing version",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://api.hubbleprotocol.io/borrowing-version",
+					"protocol": "https",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"borrowing-version"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET history",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://api.hubbleprotocol.io/history",
+					"protocol": "https",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"history"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET health",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://api.hubbleprotocol.io/health",
+					"protocol": "https",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET metrics",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://api.hubbleprotocol.io/metrics",
+					"protocol": "https",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"metrics"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET all loans",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://api.hubbleprotocol.io/loans?env=mainnet-beta&includeJsonResponse",
+					"protocol": "https",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"loans"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						},
+						{
+							"key": "env",
+							"value": "mainnet-beta"
+						},
+						{
+							"key": "includeJsonResponse",
+							"value": null
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET specific loan",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://api.hubbleprotocol.io/loans/3X3iR9XYoDVXGnLcYcMfzYDmvR1J8zvAUxy4172j4fAT",
+					"protocol": "https",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"loans",
+						"3X3iR9XYoDVXGnLcYcMfzYDmvR1J8zvAUxy4172j4fAT"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET circulating supply",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://api.hubbleprotocol.io/circulating-supply",
+					"protocol": "https",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"circulating-supply"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET circulating supply value",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://api.hubbleprotocol.io/circulating-supply-value",
+					"protocol": "https",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"circulating-supply-value"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET config",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://api.hubbleprotocol.io/config",
+					"protocol": "http",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"config"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET health",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://api.hubbleprotocol.io/health",
+					"protocol": "http",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"health"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET idl",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://api.hubbleprotocol.io/idl",
+					"protocol": "http",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"idl"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET owner loans",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://api.hubbleprotocol.io/owners/FUx8qvro7ujGJZnckBDU5yvzws26MAsq5GdnSNLXZHiG/loans",
+					"protocol": "http",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"owners",
+						"FUx8qvro7ujGJZnckBDU5yvzws26MAsq5GdnSNLXZHiG",
+						"loans"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET maintenance mode",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://api.hubbleprotocol.io/maintenance-mode",
+					"protocol": "http",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"maintenance-mode"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET staking",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://api.hubbleprotocol.io/staking",
+					"protocol": "http",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"staking"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET staking usdh users",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://api.hubbleprotocol.io/staking/usdh/users",
+					"protocol": "http",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"staking",
+						"usdh",
+						"users"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET staking hbb users",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://api.hubbleprotocol.io/staking/hbb/users",
+					"protocol": "http",
+					"host": [
+						"api",
+						"hubbleprotocol",
+						"io"
+					],
+					"path": [
+						"staking",
+						"hbb",
+						"users"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "12",
+							"disabled": true
+						},
+						{
+							"key": "to",
+							"value": "",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
