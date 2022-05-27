@@ -8,7 +8,7 @@ import { getBorrowingVersionParameterName } from '../constants/hubble';
 import { getParameter } from '../utils/awsUtils';
 import { getAwsEnvironmentVariables } from '../services/environmentService';
 import logger from '../services/logger';
-import redis from '../services/redis/redis';
+import redis, { CacheExpiryType } from '../services/redis/redis';
 import { BORROWING_VERSION_EXPIRY_IN_SECONDS } from '../constants/redis';
 
 const awsEnv = getAwsEnvironmentVariables();
@@ -35,8 +35,11 @@ export default borrowingVersionRoute;
 
 export async function getBorrowingVersion(env: ENV): Promise<BorrowingVersionResponse> {
   const parameterName = getBorrowingVersionParameterName(env);
-  const version = await redis.cacheFetch(parameterName, () => fetchBorrowingVersion(parameterName), { cacheExpirySeconds: BORROWING_VERSION_EXPIRY_IN_SECONDS });
-  return { version: parseInt(version) }
+  const version = await redis.cacheFetch(parameterName, () => fetchBorrowingVersion(parameterName), {
+    cacheExpirySeconds: BORROWING_VERSION_EXPIRY_IN_SECONDS,
+    cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+  });
+  return { version: parseInt(version) };
 }
 
 export async function fetchBorrowingVersion(parameterName: string): Promise<string> {
@@ -50,7 +53,9 @@ export async function fetchBorrowingVersion(parameterName: string): Promise<stri
   if (borrowingVersionValue) {
     const borrowingVersion = parseInt(borrowingVersionValue);
     if (isNaN(borrowingVersion)) {
-      throw Error(`Could not parse borrowing version value from AWS for parameter: ${parameterName} (has to be number). Current value: ${borrowingVersionValue}`);
+      throw Error(
+        `Could not parse borrowing version value from AWS for parameter: ${parameterName} (has to be number). Current value: ${borrowingVersionValue}`
+      );
     }
     return borrowingVersionValue;
   }
