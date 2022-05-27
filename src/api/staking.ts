@@ -12,7 +12,7 @@ import GlobalConfig from '@hubbleprotocol/hubble-sdk/dist/models/GlobalConfig';
 import { MetricsResponse } from '../models/api/MetricsResponse';
 import { HBB_DECIMALS, STABLECOIN_DECIMALS } from '../constants/math';
 import { ENV, Web3Client } from '../services/web3/client';
-import redis from '../services/redis/redis';
+import redis, { CacheExpiryType } from '../services/redis/redis';
 import { StakingUserResponse } from '../models/api/StakingUserResponse';
 import { groupBy } from '../utils/arrayUtils';
 import { PublicKey } from '@solana/web3.js';
@@ -29,15 +29,17 @@ stakingRoute.get(
     const [web3Client, env, error] = parseFromQueryParams(request.query);
     if (web3Client && env) {
       const redisKey = getStakingRedisKey(env);
-      let staking = await redis.getAndParseKey<StakingResponse[]>(redisKey);
-      if (staking) {
-        response.send(staking);
-      } else {
-        staking = await fetchStaking(env, web3Client, response) || null;
+      try {
+        const staking = await redis.cacheFetchJson(redisKey, () => fetchStaking(env, web3Client, response), {
+          cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+          cacheExpirySeconds: STAKING_STATS_EXPIRY_IN_SECONDS,
+        });
         if (staking) {
-          await redis.saveAsJsonWithExpiry(redisKey, staking, STAKING_STATS_EXPIRY_IN_SECONDS);
           response.send(staking);
         }
+      } catch (e) {
+        logger.error(e);
+        response.status(internalError).send('Could not get staking stats');
       }
     } else {
       response.status(unprocessable).send(error);
@@ -54,12 +56,18 @@ stakingRoute.get(
     const [web3Client, env, error] = parseFromQueryParams(request.query);
     if (web3Client && env) {
       const redisKey = getHbbStakersRedisKey(env);
-      let stakingUsers = await redis.getAndParseKey<StakingUserResponse[]>(redisKey);
-      if (!stakingUsers) {
-        stakingUsers = await fetchHbbStakers(env, web3Client);
-        await redis.saveAsJsonWithExpiry(redisKey, stakingUsers, STAKING_STATS_EXPIRY_IN_SECONDS);
+      try {
+        const hbbStakers = await redis.cacheFetchJson(redisKey, () => fetchHbbStakers(env, web3Client), {
+          cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+          cacheExpirySeconds: STAKING_STATS_EXPIRY_IN_SECONDS,
+        });
+        if (hbbStakers) {
+          response.send(hbbStakers);
+        }
+      } catch (e) {
+        logger.error(e);
+        response.status(internalError).send('Could not get HBB stakers');
       }
-      response.send(stakingUsers);
     } else {
       response.status(unprocessable).send(error);
     }
@@ -75,12 +83,18 @@ stakingRoute.get(
     const [web3Client, env, error] = parseFromQueryParams(request.query);
     if (web3Client && env) {
       const redisKey = getUsdhStakersRedisKey(env);
-      let usdhUsers = await redis.getAndParseKey<StakingUserResponse[]>(redisKey);
-      if (!usdhUsers) {
-        usdhUsers = await fetchUsdhStakers(env, web3Client);
-        await redis.saveAsJsonWithExpiry(redisKey, usdhUsers, STAKING_STATS_EXPIRY_IN_SECONDS);
+      try {
+        const usdhUsers = await redis.cacheFetchJson(redisKey, () => fetchUsdhStakers(env, web3Client), {
+          cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+          cacheExpirySeconds: STAKING_STATS_EXPIRY_IN_SECONDS,
+        });
+        if (usdhUsers) {
+          response.send(usdhUsers);
+        }
+      } catch (e) {
+        logger.error(e);
+        response.status(internalError).send('Could not get HBB stakers');
       }
-      response.send(usdhUsers);
     } else {
       response.status(unprocessable).send(error);
     }
