@@ -28,7 +28,7 @@ import {
 } from '@hubbleprotocol/hubble-sdk';
 import { bin } from 'd3-array';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
-import redis from '../services/redis/redis';
+import redis, { CacheExpiryType } from '../services/redis/redis';
 import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
 import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 import { getMetricsRedisKey } from '../services/redis/keyProvider';
@@ -59,7 +59,10 @@ export default metricsRoute;
 export async function getMetrics(env: ENV): Promise<MetricsResponse> {
   const bins = 20;
   const key = getMetricsRedisKey(env);
-  return await redis.cacheFetchJson(key, () => fetchMetrics(env, bins), { cacheExpirySeconds: METRICS_EXPIRY_IN_SECONDS });
+  return await redis.cacheFetchJson(key, () => fetchMetrics(env, bins), {
+    cacheExpirySeconds: METRICS_EXPIRY_IN_SECONDS,
+    cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+  });
 }
 
 async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResponse> {

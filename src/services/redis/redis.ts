@@ -1,14 +1,23 @@
 import logger from '../logger';
 import { getRedisEnvironmentVariables } from '../environmentService';
 import Redis from 'ioredis';
-import AsyncLock from "async-lock";
-import Redlock from "redlock";
+import AsyncLock from 'async-lock';
+import Redlock from 'redlock';
+import { dateToUnixSeconds } from '../../utils/calculations';
+
+export enum CacheExpiryType {
+  NoExpiration,
+  ExpireInSeconds,
+  ExpireAtDate,
+}
 
 export type CacheFetchOptions = {
-  outerLockTimeoutMillis?: number,
-  innerLockTimeoutMillis?: number,
-  cacheExpirySeconds: number,
-}
+  outerLockTimeoutMillis?: number;
+  innerLockTimeoutMillis?: number;
+  cacheExpiryType: CacheExpiryType;
+  cacheExpirySeconds?: number;
+  cacheExpireAt?: Date;
+};
 
 class RedisProvider {
   private readonly _client: Redis;
@@ -54,7 +63,7 @@ class RedisProvider {
     return null;
   }
 
-  async getKey<T>(key: string): Promise<string | null> {
+  getKey<T>(key: string): Promise<string | null> {
     return this._client.get(key);
   }
 
@@ -78,34 +87,100 @@ class RedisProvider {
     return this._client.multi().setnx(key, value).expire(key, expireAt).exec();
   }
 
-  async cacheFetch(key: string, fetch: () => PromiseLike<string>, options: CacheFetchOptions): Promise<string> {
-    return this.saveWithMutex(key, (s) => this.getKey(s), fetch, (key, val, exp) => this.saveWithExpiry(key, val, exp), options);
+  cacheFetch(key: string, fetch: () => PromiseLike<string>, options: CacheFetchOptions): Promise<string> {
+    return this.saveWithMutex(key, (s) => this.getKey(s), fetch, this.getCacheSaveMethod(options), options);
   }
 
-  async cacheFetchJson<T>(key: string, fetch: () => PromiseLike<T>, options: CacheFetchOptions): Promise<T> {
-    return this.saveWithMutex(key, (s) => this.getAndParseKey(s), fetch, (key, val, exp) => this.saveAsJsonWithExpiry(key, val, exp), options);
+  cacheFetchJson<T>(key: string, fetch: () => PromiseLike<T>, options: CacheFetchOptions): Promise<T> {
+    return this.saveWithMutex(key, (s) => this.getAndParseKey(s), fetch, this.getCacheSaveJsonMethod(options), options);
   }
 
-  private async saveWithMutex<T>(key: string, get: (key: string) => PromiseLike<T | null>, fetch: () => PromiseLike<T>, save: (key: string, value: T, expiry: number) => PromiseLike<any>, options: CacheFetchOptions): Promise<T> {
+  private getCacheSaveJsonMethod<T>(
+    options: CacheFetchOptions
+  ): (key: string, value: T, expiry: number) => PromiseLike<any> {
+    this.validateCacheOptions(options);
+    switch (options.cacheExpiryType) {
+      case CacheExpiryType.NoExpiration: {
+        return () => Promise.resolve();
+      }
+      case CacheExpiryType.ExpireInSeconds: {
+        return (key, val, exp) => this.saveAsJsonWithExpiry(key, val, exp);
+      }
+      case CacheExpiryType.ExpireAtDate: {
+        return (key, val, exp) => this.saveAsJsonWithExpiryAt(key, val, exp);
+      }
+    }
+  }
+
+  private getCacheSaveMethod(
+    options: CacheFetchOptions
+  ): (key: string, value: string, expiry: number) => PromiseLike<any> {
+    this.validateCacheOptions(options);
+    switch (options.cacheExpiryType) {
+      case CacheExpiryType.NoExpiration: {
+        return () => Promise.resolve();
+      }
+      case CacheExpiryType.ExpireInSeconds: {
+        return (key, val, exp) => this.saveWithExpiry(key, val, exp);
+      }
+      case CacheExpiryType.ExpireAtDate: {
+        return (key, val, exp) => this.saveWithExpireAt(key, val, exp);
+      }
+    }
+  }
+
+  private getCacheExpiry(options: CacheFetchOptions) {
+    switch (options.cacheExpiryType) {
+      case CacheExpiryType.NoExpiration: {
+        return 0;
+      }
+      case CacheExpiryType.ExpireInSeconds: {
+        return options.cacheExpirySeconds!;
+      }
+      case CacheExpiryType.ExpireAtDate: {
+        return dateToUnixSeconds(options.cacheExpireAt!);
+      }
+    }
+  }
+
+  private validateCacheOptions(options: CacheFetchOptions) {
+    if (options.cacheExpiryType === CacheExpiryType.ExpireInSeconds && options.cacheExpirySeconds === undefined) {
+      throw Error('Invalid usage: Cache expiry in seconds argument missing');
+    } else if (options.cacheExpiryType === CacheExpiryType.ExpireAtDate && options.cacheExpireAt === undefined) {
+      throw Error('Invalid usage: Cache expiry date argument missing');
+    }
+  }
+
+  private async saveWithMutex<T>(
+    key: string,
+    get: (key: string) => PromiseLike<T | null>,
+    fetch: () => PromiseLike<T>,
+    save: (key: string, value: T, expiry: number) => PromiseLike<any>,
+    options: CacheFetchOptions
+  ): Promise<T> {
     let value = await get(key);
     if (value === undefined || value === null) {
       const distributedLockKey = `mutex-${key}`;
-      await this._localMutex.acquire(distributedLockKey, async () => {
-        value = await get(key);
-        if (value === undefined || value === null) {
-          await this._redlock.using([distributedLockKey], options.outerLockTimeoutMillis || 10_000, async () => {
-            value = await get(key);
-            if (value === undefined || value === null) {
-              value = await fetch();
-              if (value !== undefined && value !== null) {
-                await save(key, value, options.cacheExpirySeconds);
+      await this._localMutex.acquire(
+        distributedLockKey,
+        async () => {
+          value = await get(key);
+          if (value === undefined || value === null) {
+            await this._redlock.using([distributedLockKey], options.outerLockTimeoutMillis || 10_000, async () => {
+              value = await get(key);
+              if (value === undefined || value === null) {
+                value = await fetch();
+                if (value !== undefined && value !== null) {
+                  await save(key, value, this.getCacheExpiry(options));
+                }
               }
-            }
-          });
-        }
-      }, { timeout: options.innerLockTimeoutMillis || 15_000 })
+            });
+          }
+        },
+        { timeout: options.innerLockTimeoutMillis || 15_000 }
+      );
     }
-    return value!
+    return value!;
   }
 }
 

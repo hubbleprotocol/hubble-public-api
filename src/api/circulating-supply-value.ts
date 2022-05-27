@@ -1,15 +1,15 @@
-import { internalError, parseFromQueryParams, unprocessable } from '../utils/apiUtils';
+import { internalError } from '../utils/apiUtils';
 import Router from 'express-promise-router';
 import { Request } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { OrcaPriceService } from '../services/price/OrcaPriceService';
-import redis from '../services/redis/redis';
+import redis, { CacheExpiryType } from '../services/redis/redis';
 import { getCirculatingSupplyValueRedisKey } from '../services/redis/keyProvider';
 import { CIRCULATING_SUPPLY_EXPIRY_IN_SECONDS } from '../constants/redis';
-import { ENV } from "../services/web3/client";
-import { getCirculatingSupply } from "./circulating-supply";
-import Decimal from "decimal.js";
-import logger from "../services/logger";
+import { ENV } from '../services/web3/client';
+import { getCirculatingSupply } from './circulating-supply';
+import Decimal from 'decimal.js';
+import logger from '../services/logger';
 
 /**
  * Get circulating supply value of HBB (HBB issued * HBB price). This endpoint is required for external services like CoinMarketCap.
@@ -33,7 +33,10 @@ export default circulatingSupplyValueRoute;
 
 export async function getCirculatingSupplyValue(env: ENV): Promise<string> {
   const key = getCirculatingSupplyValueRedisKey(env);
-  return redis.cacheFetch(key, () => fetchCirculatingSupplyValue(env), { cacheExpirySeconds: CIRCULATING_SUPPLY_EXPIRY_IN_SECONDS });
+  return redis.cacheFetch(key, () => fetchCirculatingSupplyValue(env), {
+    cacheExpirySeconds: CIRCULATING_SUPPLY_EXPIRY_IN_SECONDS,
+    cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+  });
 }
 
 export async function fetchCirculatingSupplyValue(env: ENV): Promise<string> {

@@ -8,7 +8,7 @@ import { MaintenanceModeResponse } from '../models/api/MaintenanceModeResponse';
 import { Request } from 'express';
 import Router from 'express-promise-router';
 import logger from '../services/logger';
-import redis from '../services/redis/redis';
+import redis, { CacheExpiryType } from '../services/redis/redis';
 import { MAINTENANCE_MODE_EXPIRY_IN_SECONDS } from '../constants/redis';
 
 const awsEnv = getAwsEnvironmentVariables();
@@ -35,8 +35,11 @@ export default maintenanceModeRoute;
 
 export async function getMaintenanceMode(env: ENV): Promise<MaintenanceModeResponse> {
   const parameterName = getMaintenanceModeParameterName(env);
-  const maintenanceMode = await redis.cacheFetch(parameterName, () => fetchMaintenanceMode(parameterName), { cacheExpirySeconds: MAINTENANCE_MODE_EXPIRY_IN_SECONDS });
-  return { enabled: parseInt(maintenanceMode) > 0 }
+  const maintenanceMode = await redis.cacheFetch(parameterName, () => fetchMaintenanceMode(parameterName), {
+    cacheExpirySeconds: MAINTENANCE_MODE_EXPIRY_IN_SECONDS,
+    cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+  });
+  return { enabled: parseInt(maintenanceMode) > 0 };
 }
 
 export async function fetchMaintenanceMode(parameterName: string): Promise<string> {
@@ -50,7 +53,9 @@ export async function fetchMaintenanceMode(parameterName: string): Promise<strin
   if (maintenanceParameterValue) {
     const maintenanceModeNumber = parseInt(maintenanceParameterValue);
     if (isNaN(maintenanceModeNumber)) {
-      throw Error(`Could not parse maintenance mode value from AWS for parameter: ${parameterName} (has to be number). Current value: ${maintenanceParameterValue}`);
+      throw Error(
+        `Could not parse maintenance mode value from AWS for parameter: ${parameterName} (has to be number). Current value: ${maintenanceParameterValue}`
+      );
     }
     return maintenanceParameterValue;
   }
