@@ -31,7 +31,7 @@ cp .env.example .env
 # ...
 ```
 
-We also use Redis for caching historical results from AWS. You can use docker-compose to run an instance of Redis locally.
+We also use Redis for caching API responses from PostgreSQL database. You can use docker-compose to run an instance of Redis locally.
 
 Run the API with npm (for debugging) and dependencies with docker-compose:
 
@@ -84,13 +84,11 @@ You may also specify the environment (`mainnet-beta`[default],`devnet`,`localnet
 GET https://api.hubbleprotocol.io/history?env=devnet
 ```
 
-History endpoint will only return the historical data of the past month by default. 
-If you need more/less data you can also use either the `from` or/and `to` query parameters to query by date.
-Both dates should be specified in their [epoch](https://en.wikipedia.org/wiki/Epoch_(computing)) form.
+History endpoint will only return the historical data of the current year by default.
 **Warning:** the maximum allowed period for the history endpoint is 1 year per request.
 
 ```http request
-GET https://api.hubbleprotocol.io/history?from=1644414557599&to=1644414562241
+GET https://api.hubbleprotocol.io/history?year=2022
 ```
 
 ### Config

@@ -5,6 +5,8 @@ import {
   CLUSTER_TABLE,
   COLLATERAL_TABLE,
   LOAN_TABLE,
+  METRICS_TABLE,
+  MetricsEntity,
   OWNER_TABLE,
   TOKEN_TABLE,
 } from '@hubbleprotocol/hubble-db';
@@ -15,6 +17,8 @@ import { CollateralTotals, SupportedToken } from '@hubbleprotocol/hubble-sdk';
 import { ENV } from './web3/client';
 import { getEnvOrDefault, getEnvOrThrowInProduction } from '../utils/envUtils';
 import { groupBy } from '../utils/arrayUtils';
+import { MetricsResponse } from '../models/api/MetricsResponse';
+import { MetricsSnapshot } from '../models/api/MetricsSnapshot';
 
 export const connectionString = getEnvOrThrowInProduction(
   'POSTGRES_CONNECTION_STRING',
@@ -42,12 +46,12 @@ let postgres = getPostgresProvider();
 
 export const testDbConnection = async (): Promise<any> => {
   try {
-    return await new Promise(resolve => resolve(postgres.raw('SELECT 1')));
+    return await new Promise((resolve) => resolve(postgres.raw('SELECT 1')));
   } catch (err) {
     logger.warn('could not connect to postgres', err);
     throw err;
   }
-}
+};
 
 type JoinedLoanRow = {
   usdh_debt: string;
@@ -122,4 +126,41 @@ export const getLoanHistory = async (loan: PublicKey, cluster: ENV) => {
     });
   }
   return history;
+};
+
+export const getMetricsHistory = async (cluster: ENV, year: number) => {
+  const rows = await postgres(`${METRICS_TABLE} as m`)
+    .select<MetricsEntity[]>('m.*')
+    .join(`${CLUSTER_TABLE} as cl`, `cl.id`, '=', `m.cluster_id`)
+    .whereRaw(`date_part('year', m.created_on) = ?`, year)
+    .where('cl.name', '=', cluster)
+    .orderBy('m.created_on');
+  const snapshots: MetricsSnapshot[] = [];
+  for (const row of rows) {
+    snapshots.push({
+      metrics: row.raw_json as unknown as MetricsResponse,
+      createdOn: row.created_on.valueOf(),
+      environment: cluster,
+    });
+  }
+  return snapshots;
+};
+
+export const getMetricsBetween = async (cluster: ENV, from: Date, to: Date) => {
+  const rows = await postgres(`${METRICS_TABLE} as m`)
+    .select<MetricsEntity[]>('m.*')
+    .join(`${CLUSTER_TABLE} as cl`, `cl.id`, '=', `m.cluster_id`)
+    .where(`m.created_on`, '>=', from)
+    .where(`m.created_on`, '<', to)
+    .where('cl.name', '=', cluster)
+    .orderBy('m.created_on');
+  const snapshots: MetricsSnapshot[] = [];
+  for (const row of rows) {
+    snapshots.push({
+      metrics: row.raw_json as unknown as MetricsResponse,
+      createdOn: row.created_on.valueOf(),
+      environment: cluster,
+    });
+  }
+  return snapshots;
 };

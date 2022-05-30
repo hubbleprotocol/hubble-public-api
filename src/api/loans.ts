@@ -7,14 +7,13 @@ import { tryGetPublicKeyFromString } from '../utils/tokenUtils';
 import { SUPPORTED_TOKENS } from '../constants/tokens';
 import { Hubble, UserMetadata, UserMetadataWithJson } from '@hubbleprotocol/hubble-sdk';
 import Decimal from 'decimal.js';
-import { calculateCollateralRatio, getTokenCollateral } from '../utils/calculations';
+import { calculateCollateralRatio, getNextSnapshotDate, getTokenCollateral } from '../utils/calculations';
 import { STABLECOIN_DECIMALS } from '../constants/math';
 import { LoanResponse, LoanResponseWithJson } from '../models/api/LoanResponse';
 import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 import { PublicKey } from '@solana/web3.js';
 import { getLoanHistory } from '../services/database';
 import redis, { CacheExpiryType } from '../services/redis/redis';
-import { HistoryQueryParams } from './history';
 import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
 import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 import { getLoanHistoryRedisKey, getLoanRedisKey, getLoansRedisKey } from '../services/redis/keyProvider';
@@ -79,6 +78,12 @@ export interface LoansParameters {
   pubkey: string;
 }
 
+type HistoryQueryParams = {
+  env: ENV | undefined;
+  from: string | undefined;
+  to: string | undefined;
+};
+
 /**
  * Get history of a specific loan
  */
@@ -103,11 +108,7 @@ loansRoute.get(
       return;
     }
 
-    const expireAt = new Date();
-    expireAt.setHours(expireAt.getHours() + 1);
-    expireAt.setMinutes(1);
-    expireAt.setSeconds(0);
-
+    const expireAt = getNextSnapshotDate();
     const key = getLoanHistoryRedisKey(loan, env);
 
     try {

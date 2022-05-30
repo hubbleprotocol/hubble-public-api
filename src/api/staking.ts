@@ -4,7 +4,6 @@ import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { internalError, parseFromQueryParams, unprocessable } from '../utils/apiUtils';
 import { Hubble } from '@hubbleprotocol/hubble-sdk';
 import { StakingResponse } from '../models/api/StakingResponse';
-import { getHistory } from './history';
 import logger from '../services/logger';
 import Decimal from 'decimal.js';
 import { getMetrics } from './metrics';
@@ -18,6 +17,7 @@ import { groupBy } from '../utils/arrayUtils';
 import { PublicKey } from '@solana/web3.js';
 import { STAKING_STATS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import { getHbbStakersRedisKey, getStakingRedisKey, getUsdhStakersRedisKey } from '../services/redis/keyProvider';
+import { getMetricsBetween } from '../services/database';
 
 /**
  * Get staking stats of HBB and USDH (APR+APY)
@@ -61,9 +61,7 @@ stakingRoute.get(
           cacheExpiryType: CacheExpiryType.ExpireInSeconds,
           cacheExpirySeconds: STAKING_STATS_EXPIRY_IN_SECONDS,
         });
-        if (hbbStakers) {
-          response.send(hbbStakers);
-        }
+        response.send(hbbStakers);
       } catch (e) {
         logger.error(e);
         response.status(internalError).send('Could not get HBB stakers');
@@ -88,9 +86,7 @@ stakingRoute.get(
           cacheExpiryType: CacheExpiryType.ExpireInSeconds,
           cacheExpirySeconds: STAKING_STATS_EXPIRY_IN_SECONDS,
         });
-        if (usdhUsers) {
-          response.send(usdhUsers);
-        }
+        response.send(usdhUsers);
       } catch (e) {
         logger.error(e);
         response.status(internalError).send('Could not get HBB stakers');
@@ -146,23 +142,19 @@ async function fetchStaking(
   to.setMinutes(5);
   to.setHours(from.getHours() + 2);
 
-  const responses = await Promise.all([
-    hubbleSdk.getGlobalConfig(),
-    getMetrics(env),
-    getHistory(env, from.valueOf(), to.valueOf()),
-  ]);
+  const responses = await Promise.all([hubbleSdk.getGlobalConfig(), getMetrics(env), getMetricsBetween(env, from, to)]);
 
   const globalConfig = responses[0];
   const metrics = responses[1];
   const history = responses[2];
 
-  if (history.metrics.length === 0) {
-    logger.error(history.body);
+  if (history.length === 0) {
+    logger.error({ message: 'Could not get historical treasury vault data', from: from.toString(), to: to.toString() });
     response.status(internalError).send('Could not get historical treasury vault data');
     return;
   }
-  const treasuryWeekAgo = history.metrics.reduce((prev, curr) => (prev.createdOn < curr.createdOn ? prev : curr))
-    .metrics.borrowing.treasury;
+  const treasuryWeekAgo = history.reduce((prev, curr) => (prev.createdOn < curr.createdOn ? prev : curr)).metrics
+    .borrowing.treasury;
   const hbbApr = calculateHbbApr(
     new Decimal(metrics.borrowing.treasury),
     treasuryWeekAgo,
