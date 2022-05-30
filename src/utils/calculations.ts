@@ -169,3 +169,13 @@ export const median = (numbers: number[]) => {
 export const dateToUnixSeconds = (date: Date) => {
   return Math.round(date.valueOf() / 1000);
 };
+
+// we expire the historical cache on the first minute of the next hour, we only keep hourly snapshots of history and refresh once per hour
+// for example, we save to cache at 10:15, hourly snapshot is saved at 11:00, we need to refresh the cache at 11:01
+export const getNextSnapshotDate = () => {
+  const expireAt = new Date();
+  expireAt.setHours(expireAt.getHours() + 1);
+  expireAt.setMinutes(1);
+  expireAt.setSeconds(0);
+  return expireAt;
+};

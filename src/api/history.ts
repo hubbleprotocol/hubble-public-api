@@ -1,131 +1,51 @@
-import { badRequest, internalError, ok } from '../utils/apiUtils';
+import { notFound } from '../utils/apiUtils';
 import { ENV } from '../services/web3/client';
-import { getAwsEnvironmentVariables, getRedisEnvironmentVariables } from '../services/environmentService';
 import { MetricsSnapshot } from '../models/api/MetricsSnapshot';
 import { HistoryResponse } from '../models/api/HistoryResponse';
-import { getDynamoDb } from '../utils/awsUtils';
-import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import Router from 'express-promise-router';
 import { Request } from 'express';
 import Decimal from 'decimal.js';
-import logger from '../services/logger';
-import redis from '../services/redis/redis';
-import { dateToUnixSeconds } from '../utils/calculations';
-
-const awsEnv = getAwsEnvironmentVariables();
-const dynamoDb = getDynamoDb(awsEnv.AWS_ACCESS_KEY_ID, awsEnv.AWS_SECRET_ACCESS_KEY, awsEnv.AWS_REGION);
-
-const redisEnv = getRedisEnvironmentVariables();
-const redisUrl = `http://${redisEnv.REDIS_HOST}:${redisEnv.REDIS_PORT}`;
+import redis, { CacheExpiryType } from '../services/redis/redis';
+import { getNextSnapshotDate } from '../utils/calculations';
+import { getHistoryRedisKey } from '../services/redis/keyProvider';
+import { getMetricsHistory } from '../services/database';
 
 /**
  * Get Hubble on-chain historical metrics
  */
 const historyRoute = Router();
-export type HistoryQueryParams = {
+type HistoryQueryParams = {
   env: ENV | undefined;
-  from: string | undefined;
-  to: string | undefined;
+  year: string | undefined;
 };
-historyRoute.get('/', async (request: Request<never, string, never, HistoryQueryParams>, response) => {
-  let env: ENV = request.query.env ?? 'mainnet-beta';
-  let from = new Date();
-  from.setMonth(from.getMonth() - 1); //by default only return historical data for the past month
-  let fromEpoch: number = request.query.from ? +request.query.from : from.valueOf();
-  let toEpoch: number = request.query.to ? +request.query.to : new Date().valueOf();
-  if (fromEpoch > toEpoch) {
-    response
-      .status(badRequest)
-      .send(`Start date (epoch: ${fromEpoch}) can not be bigger than end date (epoch: ${toEpoch})`);
-  } else {
-    const res = await getHistory(env, fromEpoch, toEpoch);
-    response.status(res.status).send(res.body);
-  }
-});
-
-async function saveHistoryMetricsToCache(env: ENV) {
-  logger.info({ message: 'saving all history metrics to cache', env });
-  // load up 1 year of history to cache
-  const fromEpoch = new Date();
-  fromEpoch.setFullYear(fromEpoch.getFullYear() - 1);
-  const params: DocumentClient.QueryInput = {
-    TableName: awsEnv.COIN_STATS_TABLE,
-    KeyConditionExpression: '#env = :envValue and createdOn >= :fromEpoch',
-    ExpressionAttributeNames: { '#env': 'environment' }, //environment is a dynamodb reserved word, so we replace it with #env
-    ExpressionAttributeValues: { ':envValue': env, ':fromEpoch': fromEpoch.valueOf() },
-  };
-  const queryResults = await getQueryResults(params);
-  await setHistoryMetrics(queryResults, env);
-  return queryResults;
-}
-
-async function getCachedHistoryMetrics(env: ENV) {
-  const history = await redis.client.get(`history-${env}`);
-  if (history) {
-    return JSON.parse(history) as MetricsSnapshot[];
-  }
-  return undefined;
-}
-
-async function setHistoryMetrics(metrics: MetricsSnapshot[], env: ENV) {
-  // expire the metrics cache on the first minute of the next hour, we only keep hourly snapshots of history in dynamodb and refresh once per hour
-  // for example, we save to cache at 10:15, hourly snapshot is saved to dynamodb at 11:00, we need to refresh the cache at 11:01
-  const expireAt = new Date();
-  expireAt.setHours(expireAt.getHours() + 1);
-  expireAt.setMinutes(1);
-  expireAt.setSeconds(0);
-
-  const key = `history-${env}`;
-
-  logger.info({ message: 'cache history metrics in redis', key, expireAt, redisUrl });
-
-  return redis.saveAsJsonWithExpiryAt(key, metrics, dateToUnixSeconds(expireAt));
-}
-
-async function getQueryResults(params: DocumentClient.QueryInput) {
-  const results = [];
-  do {
-    const queryResults = await dynamoDb.query(params).promise();
-    if (queryResults?.Items) {
-      for (const key of queryResults.Items) {
-        const snapshot = key as MetricsSnapshot;
-        results.push(snapshot);
-      }
+historyRoute.get(
+  '/',
+  async (request: Request<never, string | HistoryResponse, never, HistoryQueryParams>, response) => {
+    let env: ENV = request.query.env ?? 'mainnet-beta';
+    let year = request.query.year ? +request.query.year : new Date().getFullYear();
+    if (year < 2022) {
+      response.status(notFound).send('Historical data is only available for year 2022+.');
     } else {
-      logger.error(`could not get history from AWS ${history}`);
-      throw Error('Could not get history data from AWS');
+      const redisKey = getHistoryRedisKey(env, year);
+      const expireAt = getNextSnapshotDate();
+      const res = await redis.cacheFetchJson(redisKey, () => fetchHistory(env, year), {
+        cacheExpiryType: CacheExpiryType.ExpireAtDate,
+        cacheExpireAt: expireAt,
+      });
+      response.send(res);
     }
-    params.ExclusiveStartKey = queryResults.LastEvaluatedKey;
-  } while (params.ExclusiveStartKey !== undefined);
-  return results;
-}
-
-export async function getHistory(
-  env: ENV,
-  fromEpoch: number,
-  toEpoch: number
-): Promise<{ status: number; body: any; metrics: MetricsSnapshot[] }> {
-  try {
-    let cachedMetrics = await getCachedHistoryMetrics(env);
-    if (!cachedMetrics) {
-      cachedMetrics = await saveHistoryMetricsToCache(env);
-    }
-
-    const filteredMetrics = cachedMetrics.filter((x) => x.createdOn >= fromEpoch && x.createdOn <= toEpoch);
-
-    // 3. every hour at 00 minutes we schedule with cron expression and call the metrics function and save it alongside existing redis cache by appending it to the history and updating endDate
-
-    return { status: ok, body: metricsToHistory(filteredMetrics, fromEpoch, toEpoch), metrics: filteredMetrics };
-  } catch (e) {
-    logger.error(e);
-    return { status: internalError, body: e instanceof Error ? e.message : e, metrics: [] };
   }
-}
+);
 
-const metricsToHistory = (metrics: MetricsSnapshot[], fromEpoch: number, toEpoch: number) => {
+const fetchHistory = async (env: ENV, year: number) => {
+  const metricsSnapshots = await getMetricsHistory(env, year);
+  return metricsToHistory(metricsSnapshots, year);
+};
+
+const metricsToHistory = (metrics: MetricsSnapshot[], year: number) => {
   const response: HistoryResponse = {
-    startDate: fromEpoch,
-    endDate: toEpoch,
+    startDate: new Date(year, 0, 1).valueOf(),
+    endDate: new Date(year, 11, 31).valueOf(),
     borrowersHistory: [],
     hbbHoldersHistory: [],
     hbbPriceHistory: [],

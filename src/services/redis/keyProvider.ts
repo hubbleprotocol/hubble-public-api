@@ -40,3 +40,7 @@ export function getMetricsRedisKey(env: ENV) {
 export function getOwnerRedisKey(owner: PublicKey, env: ENV) {
   return `owner-${env}-${owner.toString()}`;
 }
+
+export function getHistoryRedisKey(env: ENV, year: number) {
+  return `history-${env}-${year}`;
+}
