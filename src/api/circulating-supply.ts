@@ -8,21 +8,26 @@ import { CIRCULATING_SUPPLY_EXPIRY_IN_SECONDS } from '../constants/redis';
 import { ENV, Web3Client } from '../services/web3/client';
 import logger from '../services/logger';
 import { internalError } from '../utils/apiUtils';
+import { middleware } from './middleware/middleware';
 
 /**
  * Get circulating supply of HBB (amount of HBB issued). This endpoint is required for external services like CoinGecko.
  */
 const circulatingSupplyRoute = Router();
-circulatingSupplyRoute.get('/', async (request: Request<never, string, never, EnvironmentQueryParams>, response) => {
-  const env: ENV = request.query.env ?? 'mainnet-beta';
-  try {
-    const circulatingSupply = await getCirculatingSupply(env);
-    response.send(circulatingSupply);
-  } catch (e) {
-    logger.error(e);
-    response.status(internalError).send('Could not get circulating supply');
+circulatingSupplyRoute.get(
+  '/',
+  middleware.validateSolanaCluster,
+  async (request: Request<never, string, never, EnvironmentQueryParams>, response) => {
+    const env: ENV = request.query.env ?? 'mainnet-beta';
+    try {
+      const circulatingSupply = await getCirculatingSupply(env);
+      response.send(circulatingSupply);
+    } catch (e) {
+      logger.error(e);
+      response.status(internalError).send('Could not get circulating supply');
+    }
   }
-});
+);
 
 export default circulatingSupplyRoute;
 

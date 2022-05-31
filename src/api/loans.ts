@@ -19,6 +19,7 @@ import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 import { getLoanHistoryRedisKey, getLoanRedisKey, getLoansRedisKey } from '../services/redis/keyProvider';
 import { LOANS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
+import { middleware } from './middleware/middleware';
 
 /**
  * Get live Hubble on-chain loan data
@@ -30,6 +31,7 @@ const loansRoute = Router();
  */
 loansRoute.get(
   '/',
+  middleware.validateSolanaCluster,
   async (
     request: Request<
       never,
@@ -89,6 +91,7 @@ type HistoryQueryParams = {
  */
 loansRoute.get(
   '/:pubkey/history',
+  middleware.validateSolanaCluster,
   async (request: Request<LoansParameters, LoanHistoryResponse[] | string, never, HistoryQueryParams>, response) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
     const loan = tryGetPublicKeyFromString(request.params.pubkey);
@@ -139,6 +142,7 @@ function sendFilteredHistory(
  */
 loansRoute.get(
   '/:pubkey',
+  middleware.validateSolanaCluster,
   async (request: Request<LoansParameters, LoanResponse | string, never, EnvironmentQueryParams>, response) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
     const loanPubkey = tryGetPublicKeyFromString(request.params.pubkey);

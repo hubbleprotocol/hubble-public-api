@@ -14,6 +14,7 @@ import { getOwnerRedisKey } from '../services/redis/keyProvider';
 import { PublicKey } from '@solana/web3.js';
 import { LOANS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
+import { middleware } from './middleware/middleware';
 
 const ownersRoute = Router();
 
@@ -22,6 +23,7 @@ const ownersRoute = Router();
  */
 ownersRoute.get(
   '/:pubkey/loans',
+  middleware.validateSolanaCluster,
   async (request: Request<LoansParameters, LoanResponse[] | string, never, EnvironmentQueryParams>, response) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
     const user = tryGetPublicKeyFromString(request.params.pubkey);

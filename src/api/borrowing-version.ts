@@ -10,6 +10,7 @@ import { getAwsEnvironmentVariables } from '../services/environmentService';
 import logger from '../services/logger';
 import redis, { CacheExpiryType } from '../services/redis/redis';
 import { BORROWING_VERSION_EXPIRY_IN_SECONDS } from '../constants/redis';
+import { middleware } from './middleware/middleware';
 
 const awsEnv = getAwsEnvironmentVariables();
 
@@ -19,6 +20,7 @@ const awsEnv = getAwsEnvironmentVariables();
 const borrowingVersionRoute = Router();
 borrowingVersionRoute.get(
   '/',
+  middleware.validateSolanaCluster,
   async (request: Request<never, string | BorrowingVersionResponse, never, EnvironmentQueryParams>, response) => {
     const env: ENV = request.query.env ?? 'mainnet-beta';
     try {

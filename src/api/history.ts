@@ -1,4 +1,4 @@
-import { notFound } from '../utils/apiUtils';
+import { badRequest } from '../utils/apiUtils';
 import { ENV } from '../services/web3/client';
 import { MetricsSnapshot } from '../models/api/MetricsSnapshot';
 import { HistoryResponse } from '../models/api/HistoryResponse';
@@ -9,6 +9,7 @@ import redis, { CacheExpiryType } from '../services/redis/redis';
 import { getNextSnapshotDate } from '../utils/calculations';
 import { getHistoryRedisKey } from '../services/redis/keyProvider';
 import { getMetricsHistory } from '../services/database';
+import { middleware } from './middleware/middleware';
 
 /**
  * Get Hubble on-chain historical metrics
@@ -20,11 +21,12 @@ type HistoryQueryParams = {
 };
 historyRoute.get(
   '/',
+  middleware.validateSolanaCluster,
   async (request: Request<never, string | HistoryResponse, never, HistoryQueryParams>, response) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
     let year = request.query.year ? +request.query.year : new Date().getFullYear();
     if (year < 2022) {
-      response.status(notFound).send('Historical data is only available for year 2022+.');
+      response.status(badRequest).send('Historical data is only available for year 2022+.');
     } else {
       const redisKey = getHistoryRedisKey(env, year);
       const expireAt = getNextSnapshotDate();

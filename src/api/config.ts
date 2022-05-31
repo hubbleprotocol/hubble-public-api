@@ -3,6 +3,7 @@ import { getConfigByCluster, getAllConfigs, HubbleConfig } from '@hubbleprotocol
 import Router from 'express-promise-router';
 import { Request } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
+import { middleware } from './middleware/middleware';
 
 /**
  * Get Hubble config
@@ -10,6 +11,7 @@ import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 const configRoute = Router();
 configRoute.get(
   '/',
+  middleware.validateSolanaCluster,
   (request: Request<never, HubbleConfig | HubbleConfig[], never, EnvironmentQueryParams>, response) => {
     let env: ENV | undefined;
     if (request.query.env) {
