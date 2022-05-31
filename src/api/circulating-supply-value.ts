@@ -10,6 +10,7 @@ import { ENV } from '../services/web3/client';
 import { getCirculatingSupply } from './circulating-supply';
 import Decimal from 'decimal.js';
 import logger from '../services/logger';
+import { middleware } from './middleware/middleware';
 
 /**
  * Get circulating supply value of HBB (HBB issued * HBB price). This endpoint is required for external services like CoinMarketCap.
@@ -17,6 +18,7 @@ import logger from '../services/logger';
 const circulatingSupplyValueRoute = Router();
 circulatingSupplyValueRoute.get(
   '/',
+  middleware.validateSolanaCluster,
   async (request: Request<never, string, never, EnvironmentQueryParams>, response) => {
     const env: ENV = request.query.env ?? 'mainnet-beta';
     try {

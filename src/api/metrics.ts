@@ -35,6 +35,7 @@ import { getMetricsRedisKey } from '../services/redis/keyProvider';
 import { METRICS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
 import { internalError } from '../utils/apiUtils';
+import { middleware } from './middleware/middleware';
 
 /**
  * Get live Hubble on-chain metrics data
@@ -42,6 +43,7 @@ import { internalError } from '../utils/apiUtils';
 const metricsRoute = Router();
 metricsRoute.get(
   '/',
+  middleware.validateSolanaCluster,
   async (request: Request<never, MetricsResponse | string, never, EnvironmentQueryParams>, response) => {
     const env: ENV = request.query.env ?? 'mainnet-beta';
     try {

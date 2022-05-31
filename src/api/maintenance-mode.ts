@@ -10,6 +10,7 @@ import Router from 'express-promise-router';
 import logger from '../services/logger';
 import redis, { CacheExpiryType } from '../services/redis/redis';
 import { MAINTENANCE_MODE_EXPIRY_IN_SECONDS } from '../constants/redis';
+import { middleware } from './middleware/middleware';
 
 const awsEnv = getAwsEnvironmentVariables();
 
@@ -19,6 +20,7 @@ const awsEnv = getAwsEnvironmentVariables();
 const maintenanceModeRoute = Router();
 maintenanceModeRoute.get(
   '/',
+  middleware.validateSolanaCluster,
   async (request: Request<never, MaintenanceModeResponse | string, never, EnvironmentQueryParams>, response) => {
     const env: ENV = request.query.env ?? 'mainnet-beta';
     try {

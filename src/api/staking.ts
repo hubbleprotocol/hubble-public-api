@@ -18,6 +18,7 @@ import { PublicKey } from '@solana/web3.js';
 import { STAKING_STATS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import { getHbbStakersRedisKey, getStakingRedisKey, getUsdhStakersRedisKey } from '../services/redis/keyProvider';
 import { getMetricsBetween } from '../services/database';
+import { middleware } from './middleware/middleware';
 
 /**
  * Get staking stats of HBB and USDH (APR+APY)
@@ -25,6 +26,7 @@ import { getMetricsBetween } from '../services/database';
 const stakingRoute = Router();
 stakingRoute.get(
   '/',
+  middleware.validateSolanaCluster,
   async (request: Request<never, StakingResponse[] | string, never, EnvironmentQueryParams>, response) => {
     const [web3Client, env, error] = parseFromQueryParams(request.query);
     if (web3Client && env) {
@@ -52,6 +54,7 @@ stakingRoute.get(
  */
 stakingRoute.get(
   '/hbb/users',
+  middleware.validateSolanaCluster,
   async (request: Request<never, StakingUserResponse[] | string, never, EnvironmentQueryParams>, response) => {
     const [web3Client, env, error] = parseFromQueryParams(request.query);
     if (web3Client && env) {
@@ -77,6 +80,7 @@ stakingRoute.get(
  */
 stakingRoute.get(
   '/usdh/users',
+  middleware.validateSolanaCluster,
   async (request: Request<never, StakingUserResponse[] | string, never, EnvironmentQueryParams>, response) => {
     const [web3Client, env, error] = parseFromQueryParams(request.query);
     if (web3Client && env) {
