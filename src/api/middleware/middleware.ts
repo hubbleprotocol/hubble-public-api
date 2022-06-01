@@ -22,8 +22,4 @@ const validateSolanaCluster = (req: Request<any, any, any, any, any>, res: Respo
   }
 };
 
-const addCacheHeader = (req: Request<any, any, any, any, any>, res: Response, next: NextFunction) => {
-  // todo: add
-};
-
-export const middleware = { validateSolanaCluster, addCacheHeader };
+export const middleware = { validateSolanaCluster };

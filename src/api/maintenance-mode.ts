@@ -1,4 +1,4 @@
-import { internalError } from '../utils/apiUtils';
+import { internalError, sendWithCacheControl } from '../utils/apiUtils';
 import { ENV } from '../services/web3/client';
 import { getParameter } from '../utils/awsUtils';
 import { getMaintenanceModeParameterName } from '../constants/hubble';
@@ -23,9 +23,10 @@ maintenanceModeRoute.get(
   middleware.validateSolanaCluster,
   async (request: Request<never, MaintenanceModeResponse | string, never, EnvironmentQueryParams>, response) => {
     const env: ENV = request.query.env ?? 'mainnet-beta';
+    const parameterName = getMaintenanceModeParameterName(env);
     try {
-      const maintenanceMode = await getMaintenanceMode(env);
-      response.send(maintenanceMode);
+      const maintenanceMode = await getMaintenanceMode(env, parameterName);
+      await sendWithCacheControl(parameterName, response, maintenanceMode);
     } catch (e) {
       logger.error(e);
       response.status(internalError).send('Could not get maintenance mode');
@@ -35,8 +36,7 @@ maintenanceModeRoute.get(
 
 export default maintenanceModeRoute;
 
-export async function getMaintenanceMode(env: ENV): Promise<MaintenanceModeResponse> {
-  const parameterName = getMaintenanceModeParameterName(env);
+export async function getMaintenanceMode(env: ENV, parameterName: string): Promise<MaintenanceModeResponse> {
   const maintenanceMode = await redis.cacheFetch(parameterName, () => fetchMaintenanceMode(parameterName), {
     cacheExpirySeconds: MAINTENANCE_MODE_EXPIRY_IN_SECONDS,
     cacheExpiryType: CacheExpiryType.ExpireInSeconds,

@@ -1,7 +1,7 @@
 import Router from 'express-promise-router';
 import { Request, Response } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
-import { internalError, parseFromQueryParams, unprocessable } from '../utils/apiUtils';
+import { internalError, parseFromQueryParams, sendWithCacheControl, unprocessable } from '../utils/apiUtils';
 import { Hubble } from '@hubbleprotocol/hubble-sdk';
 import { StakingResponse } from '../models/api/StakingResponse';
 import logger from '../services/logger';
@@ -16,7 +16,12 @@ import { StakingUserResponse } from '../models/api/StakingUserResponse';
 import { groupBy } from '../utils/arrayUtils';
 import { PublicKey } from '@solana/web3.js';
 import { STAKING_STATS_EXPIRY_IN_SECONDS } from '../constants/redis';
-import { getHbbStakersRedisKey, getStakingRedisKey, getUsdhStakersRedisKey } from '../services/redis/keyProvider';
+import {
+  getHbbStakersRedisKey,
+  getMetricsRedisKey,
+  getStakingRedisKey,
+  getUsdhStakersRedisKey,
+} from '../services/redis/keyProvider';
 import { getMetricsBetween } from '../services/database';
 import { middleware } from './middleware/middleware';
 
@@ -37,7 +42,7 @@ stakingRoute.get(
           cacheExpirySeconds: STAKING_STATS_EXPIRY_IN_SECONDS,
         });
         if (staking) {
-          response.send(staking);
+          await sendWithCacheControl(redisKey, response, staking);
         }
       } catch (e) {
         logger.error(e);
@@ -64,7 +69,7 @@ stakingRoute.get(
           cacheExpiryType: CacheExpiryType.ExpireInSeconds,
           cacheExpirySeconds: STAKING_STATS_EXPIRY_IN_SECONDS,
         });
-        response.send(hbbStakers);
+        await sendWithCacheControl(redisKey, response, hbbStakers);
       } catch (e) {
         logger.error(e);
         response.status(internalError).send('Could not get HBB stakers');
@@ -90,7 +95,7 @@ stakingRoute.get(
           cacheExpiryType: CacheExpiryType.ExpireInSeconds,
           cacheExpirySeconds: STAKING_STATS_EXPIRY_IN_SECONDS,
         });
-        response.send(usdhUsers);
+        await sendWithCacheControl(redisKey, response, usdhUsers);
       } catch (e) {
         logger.error(e);
         response.status(internalError).send('Could not get HBB stakers');
@@ -146,7 +151,11 @@ async function fetchStaking(
   to.setMinutes(5);
   to.setHours(from.getHours() + 2);
 
-  const responses = await Promise.all([hubbleSdk.getGlobalConfig(), getMetrics(env), getMetricsBetween(env, from, to)]);
+  const responses = await Promise.all([
+    hubbleSdk.getGlobalConfig(),
+    getMetrics(env, getMetricsRedisKey(env)),
+    getMetricsBetween(env, from, to),
+  ]);
 
   const globalConfig = responses[0];
   const metrics = responses[1];

@@ -1,4 +1,4 @@
-import { internalError } from '../utils/apiUtils';
+import { internalError, sendWithCacheControl } from '../utils/apiUtils';
 import Router from 'express-promise-router';
 import { Request } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
@@ -23,9 +23,10 @@ borrowingVersionRoute.get(
   middleware.validateSolanaCluster,
   async (request: Request<never, string | BorrowingVersionResponse, never, EnvironmentQueryParams>, response) => {
     const env: ENV = request.query.env ?? 'mainnet-beta';
+    const parameterName = getBorrowingVersionParameterName(env);
     try {
-      const borrowingVersion = await getBorrowingVersion(env);
-      response.send(borrowingVersion);
+      const borrowingVersion = await getBorrowingVersion(env, parameterName);
+      await sendWithCacheControl(parameterName, response, borrowingVersion);
     } catch (e) {
       logger.error(e);
       response.status(internalError).send('Could not get borrowing version');
@@ -35,8 +36,7 @@ borrowingVersionRoute.get(
 
 export default borrowingVersionRoute;
 
-export async function getBorrowingVersion(env: ENV): Promise<BorrowingVersionResponse> {
-  const parameterName = getBorrowingVersionParameterName(env);
+export async function getBorrowingVersion(env: ENV, parameterName: string): Promise<BorrowingVersionResponse> {
   const version = await redis.cacheFetch(parameterName, () => fetchBorrowingVersion(parameterName), {
     cacheExpirySeconds: BORROWING_VERSION_EXPIRY_IN_SECONDS,
     cacheExpiryType: CacheExpiryType.ExpireInSeconds,
