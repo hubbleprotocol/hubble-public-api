@@ -3,7 +3,7 @@ import { LoanResponse } from '../models/api/LoanResponse';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { ENV, Web3Client } from '../services/web3/client';
 import { tryGetPublicKeyFromString } from '../utils/tokenUtils';
-import { badRequest, internalError } from '../utils/apiUtils';
+import { badRequest, internalError, sendWithCacheControl } from '../utils/apiUtils';
 import { Hubble, UserMetadata } from '@hubbleprotocol/hubble-sdk';
 import Router from 'express-promise-router';
 import { getLoansFromUserVaults, LoansParameters } from './loans';
@@ -37,7 +37,7 @@ ownersRoute.get(
         cacheExpiryType: CacheExpiryType.ExpireInSeconds,
         cacheExpirySeconds: LOANS_EXPIRY_IN_SECONDS,
       });
-      response.send(loans);
+      await sendWithCacheControl(key, response, loans);
     } catch (e) {
       logger.error(e);
       response.status(internalError).send('Could not get owner loans');

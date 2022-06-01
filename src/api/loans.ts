@@ -2,7 +2,7 @@ import Router from 'express-promise-router';
 import { Request, Response } from 'express';
 import { ENV, Web3Client } from '../services/web3/client';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
-import { badRequest, internalError, notFound } from '../utils/apiUtils';
+import { badRequest, internalError, notFound, sendWithCacheControl } from '../utils/apiUtils';
 import { tryGetPublicKeyFromString } from '../utils/tokenUtils';
 import { SUPPORTED_TOKENS } from '../constants/tokens';
 import { Hubble, UserMetadata, UserMetadataWithJson } from '@hubbleprotocol/hubble-sdk';
@@ -52,7 +52,7 @@ loansRoute.get(
         cacheExpiryType: CacheExpiryType.ExpireInSeconds,
         cacheExpirySeconds: LOANS_EXPIRY_IN_SECONDS,
       });
-      response.send(loans);
+      await sendWithCacheControl(redisKey, response, loans);
     } catch (e) {
       logger.error(e);
       response.status(internalError).send('Could not get loans');
@@ -119,7 +119,7 @@ loansRoute.get(
         cacheExpiryType: CacheExpiryType.ExpireAtDate,
         cacheExpireAt: expireAt,
       });
-      sendFilteredHistory(history, fromEpoch, toEpoch, response);
+      await sendFilteredHistory(history, fromEpoch, toEpoch, response, key);
     } catch (e) {
       logger.error(e);
       response.status(internalError).send(`Could not get loan history for ${request.params.pubkey}`);
@@ -131,10 +131,11 @@ function sendFilteredHistory(
   history: LoanHistoryResponse[],
   fromEpoch: number,
   toEpoch: number,
-  response: Response<LoanHistoryResponse[] | string>
+  response: Response<LoanHistoryResponse[] | string>,
+  redisKey: string
 ) {
   const filtered = history.filter((x) => x.epoch >= fromEpoch && x.epoch <= toEpoch);
-  response.send(filtered);
+  return sendWithCacheControl(redisKey, response, filtered);
 }
 
 /**
@@ -158,7 +159,7 @@ loansRoute.get(
         cacheExpirySeconds: LOANS_EXPIRY_IN_SECONDS,
       });
       if (loan) {
-        response.send(loan);
+        await sendWithCacheControl(key, response, loan);
       } else {
         response.status(notFound).send(`Could not get loan for public key: ${request.params.pubkey}`);
       }

@@ -7,7 +7,7 @@ import { getCirculatingSupplyRedisKey } from '../services/redis/keyProvider';
 import { CIRCULATING_SUPPLY_EXPIRY_IN_SECONDS } from '../constants/redis';
 import { ENV, Web3Client } from '../services/web3/client';
 import logger from '../services/logger';
-import { internalError } from '../utils/apiUtils';
+import { internalError, sendWithCacheControl } from '../utils/apiUtils';
 import { middleware } from './middleware/middleware';
 
 /**
@@ -19,9 +19,10 @@ circulatingSupplyRoute.get(
   middleware.validateSolanaCluster,
   async (request: Request<never, string, never, EnvironmentQueryParams>, response) => {
     const env: ENV = request.query.env ?? 'mainnet-beta';
+    const key = getCirculatingSupplyRedisKey(env);
     try {
       const circulatingSupply = await getCirculatingSupply(env);
-      response.send(circulatingSupply);
+      await sendWithCacheControl(key, response, circulatingSupply);
     } catch (e) {
       logger.error(e);
       response.status(internalError).send('Could not get circulating supply');

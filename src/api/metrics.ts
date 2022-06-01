@@ -34,7 +34,7 @@ import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 import { getMetricsRedisKey } from '../services/redis/keyProvider';
 import { METRICS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
-import { internalError } from '../utils/apiUtils';
+import { internalError, sendWithCacheControl } from '../utils/apiUtils';
 import { middleware } from './middleware/middleware';
 
 /**
@@ -46,9 +46,10 @@ metricsRoute.get(
   middleware.validateSolanaCluster,
   async (request: Request<never, MetricsResponse | string, never, EnvironmentQueryParams>, response) => {
     const env: ENV = request.query.env ?? 'mainnet-beta';
+    const key = getMetricsRedisKey(env);
     try {
-      const metrics = await getMetrics(env);
-      response.send(metrics);
+      const metrics = await getMetrics(env, key);
+      await sendWithCacheControl(key, response, metrics);
     } catch (e) {
       logger.error(e);
       response.status(internalError).send('Could not get metrics');
@@ -58,9 +59,8 @@ metricsRoute.get(
 
 export default metricsRoute;
 
-export async function getMetrics(env: ENV): Promise<MetricsResponse> {
+export async function getMetrics(env: ENV, key: string): Promise<MetricsResponse> {
   const bins = 20;
-  const key = getMetricsRedisKey(env);
   return await redis.cacheFetchJson(key, () => fetchMetrics(env, bins), {
     cacheExpirySeconds: METRICS_EXPIRY_IN_SECONDS,
     cacheExpiryType: CacheExpiryType.ExpireInSeconds,

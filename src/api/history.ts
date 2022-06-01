@@ -1,4 +1,4 @@
-import { badRequest } from '../utils/apiUtils';
+import { badRequest, sendWithCacheControl } from '../utils/apiUtils';
 import { ENV } from '../services/web3/client';
 import { MetricsSnapshot } from '../models/api/MetricsSnapshot';
 import { HistoryResponse } from '../models/api/HistoryResponse';
@@ -30,11 +30,11 @@ historyRoute.get(
     } else {
       const redisKey = getHistoryRedisKey(env, year);
       const expireAt = getNextSnapshotDate();
-      const res = await redis.cacheFetchJson(redisKey, () => fetchHistory(env, year), {
+      const history = await redis.cacheFetchJson(redisKey, () => fetchHistory(env, year), {
         cacheExpiryType: CacheExpiryType.ExpireAtDate,
         cacheExpireAt: expireAt,
       });
-      response.send(res);
+      await sendWithCacheControl(redisKey, response, history);
     }
   }
 );

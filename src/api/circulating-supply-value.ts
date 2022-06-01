@@ -1,4 +1,4 @@
-import { internalError } from '../utils/apiUtils';
+import { internalError, sendWithCacheControl } from '../utils/apiUtils';
 import Router from 'express-promise-router';
 import { Request } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
@@ -21,9 +21,10 @@ circulatingSupplyValueRoute.get(
   middleware.validateSolanaCluster,
   async (request: Request<never, string, never, EnvironmentQueryParams>, response) => {
     const env: ENV = request.query.env ?? 'mainnet-beta';
+    const key = getCirculatingSupplyValueRedisKey(env);
     try {
-      const circulatingSupplyValue = await getCirculatingSupplyValue(env);
-      response.send(circulatingSupplyValue);
+      const circulatingSupplyValue = await getCirculatingSupplyValue(env, key);
+      await sendWithCacheControl(key, response, circulatingSupplyValue);
     } catch (e) {
       logger.error(e);
       response.status(internalError).send('Could not get circulating supply value');
@@ -33,8 +34,7 @@ circulatingSupplyValueRoute.get(
 
 export default circulatingSupplyValueRoute;
 
-export async function getCirculatingSupplyValue(env: ENV): Promise<string> {
-  const key = getCirculatingSupplyValueRedisKey(env);
+export async function getCirculatingSupplyValue(env: ENV, key: string): Promise<string> {
   return redis.cacheFetch(key, () => fetchCirculatingSupplyValue(env), {
     cacheExpirySeconds: CIRCULATING_SUPPLY_EXPIRY_IN_SECONDS,
     cacheExpiryType: CacheExpiryType.ExpireInSeconds,
