@@ -213,7 +213,8 @@ function calculateHbbApr(
 
 function calculateUsdhApr(globalConfig: GlobalConfig, metrics: MetricsResponse) {
   const minutesPerYear = 365 * 24 * 60;
-  return globalConfig.issuancePerMinute
+  return globalConfig.issuancePerSecond
+    .mul(60)
     .dividedBy(HBB_DECIMALS)
     .mul(minutesPerYear)
     .mul(new Decimal(metrics.hbb.price))
