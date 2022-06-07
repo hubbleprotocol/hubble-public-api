@@ -13,12 +13,14 @@ import {
 import { PublicKey } from '@solana/web3.js';
 import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 import Decimal from 'decimal.js';
-import { CollateralTotals, SupportedToken } from '@hubbleprotocol/hubble-sdk';
+import { SupportedToken } from '@hubbleprotocol/hubble-sdk';
 import { ENV } from './web3/client';
 import { getEnvOrDefault, getEnvOrThrowInProduction } from '../utils/envUtils';
 import { groupBy } from '../utils/arrayUtils';
 import { MetricsResponse } from '../models/api/MetricsResponse';
 import { MetricsSnapshot } from '../models/api/MetricsSnapshot';
+import { CollateralTokens } from '../constants/tokens';
+import TokenCollateral from '../models/api/TokenCollateral';
 
 export const connectionString = getEnvOrThrowInProduction(
   'POSTGRES_CONNECTION_STRING',
@@ -98,10 +100,10 @@ export const getLoanHistory = async (loan: PublicKey, cluster: ENV) => {
     .join(`${CLUSTER_TABLE} as cl`, `cl.id`, '=', `o.cluster_id`)
     .where({ 'l.user_metadata_pubkey': loan.toString(), 'cl.name': cluster });
   for (const [timestamp, loans] of groupBy(rows, (x) => x.created_on.valueOf())) {
-    const totals: CollateralTotals[] = [];
+    const totals: TokenCollateral[] = [];
     for (const row of loans) {
       totals.push({
-        token: row.token_name as SupportedToken,
+        token: CollateralTokens.find((x) => x.name === row.token_name)!,
         inactive: new Decimal(row.inactive_quantity),
         price: new Decimal(row.price),
         deposited: new Decimal(row.deposited_quantity),
@@ -112,7 +114,12 @@ export const getLoanHistory = async (loan: PublicKey, cluster: ENV) => {
       epoch: timestamp,
       loan: {
         loanToValue: new Decimal(loan.loan_to_value),
-        collateral: totals,
+        collateral: totals.map((x) => ({
+          token: x.token.name as SupportedToken,
+          price: x.price,
+          inactive: x.inactive,
+          deposited: x.deposited,
+        })),
         totalCollateralValue: new Decimal(loan.total_collateral_value),
         userId: new Decimal(loan.user_id),
         version: parseInt(loan.version),

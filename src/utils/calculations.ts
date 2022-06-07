@@ -1,78 +1,92 @@
-import { SUPPORTED_TOKENS, SupportedToken } from '../constants/tokens';
+import { CollateralToken, CollateralTokens } from '../constants/tokens';
 import { lamportsToCollateral } from './tokenUtils';
 import { SCALE_FACTOR } from '../constants/math';
 import Decimal from 'decimal.js';
 import {
   BorrowingMarketState,
   CollateralAmounts,
-  CollateralTotals,
   StabilityPoolState,
   StabilityProviderState,
 } from '@hubbleprotocol/hubble-sdk';
 import logger from '../services/logger';
 import { PythPrice } from '../services/price/PythPriceService';
+import TokenCollateral from '../models/api/TokenCollateral';
+
+export const getTotalTokenCollateral = (token: CollateralToken, prices: PythPrice[], market: BorrowingMarketState) => {
+  const price = getPythPriceForToken(token, prices);
+  const deposited = lamportsToCollateral(market.depositedCollateral.amounts[token.id], token);
+  const inactive = lamportsToCollateral(market.inactiveCollateral.amounts[token.id], token);
+  return {
+    deposited,
+    inactive,
+    price,
+    token,
+  };
+};
 
 export const getTokenCollateral = (
-  token: SupportedToken,
+  token: CollateralToken,
   deposited: CollateralAmounts,
   inactive: CollateralAmounts,
   prices: PythPrice[]
-): CollateralTotals => {
-  switch (token) {
-    case 'BTC':
+): TokenCollateral => {
+  switch (token.name) {
+    case 'SOL':
       return {
-        deposited: lamportsToCollateral(deposited.btc, token),
-        inactive: lamportsToCollateral(inactive.btc, token),
+        deposited: lamportsToCollateral(deposited.sol, token),
+        inactive: lamportsToCollateral(inactive.sol, token),
         price: getPythPriceForToken(token, prices),
-        token: token,
-      };
-    case 'SRM':
-      return {
-        deposited: lamportsToCollateral(deposited.srm, token),
-        inactive: lamportsToCollateral(inactive.srm, token),
-        price: getPythPriceForToken(token, prices),
-        token: token,
+        token,
       };
     case 'ETH':
       return {
         deposited: lamportsToCollateral(deposited.eth, token),
         inactive: lamportsToCollateral(inactive.eth, token),
         price: getPythPriceForToken(token, prices),
-        token: token,
+        token,
       };
-    case 'SOL':
+    case 'BTC':
       return {
-        deposited: lamportsToCollateral(deposited.sol, token),
-        inactive: lamportsToCollateral(inactive.sol, token),
+        deposited: lamportsToCollateral(deposited.btc, token),
+        inactive: lamportsToCollateral(inactive.btc, token),
         price: getPythPriceForToken(token, prices),
-        token: token,
+        token,
       };
-    case 'FTT':
+    case 'SRM':
       return {
-        deposited: lamportsToCollateral(deposited.ftt, token),
-        inactive: lamportsToCollateral(inactive.ftt, token),
+        deposited: lamportsToCollateral(deposited.srm, token),
+        inactive: lamportsToCollateral(inactive.srm, token),
         price: getPythPriceForToken(token, prices),
-        token: token,
+        token,
       };
     case 'RAY':
       return {
         deposited: lamportsToCollateral(deposited.ray, token),
         inactive: lamportsToCollateral(inactive.ray, token),
         price: getPythPriceForToken(token, prices),
-        token: token,
+        token,
       };
-    case 'mSOL':
+    case 'FTT':
+      return {
+        deposited: lamportsToCollateral(deposited.ftt, token),
+        inactive: lamportsToCollateral(inactive.ftt, token),
+        price: getPythPriceForToken(token, prices),
+        token,
+      };
+    case 'MSOL':
       return {
         deposited: lamportsToCollateral(deposited.msol, token),
         inactive: lamportsToCollateral(inactive.msol, token),
         price: getPythPriceForToken(token, prices),
-        token: token,
+        token,
       };
+    default:
+      throw Error('not supported');
   }
 };
 
-function getPythPriceForToken(token: SupportedToken, prices: PythPrice[]) {
-  const price = prices.find((x) => x.token === token);
+function getPythPriceForToken(token: CollateralToken, prices: PythPrice[]) {
+  const price = prices.find((x) => x.token.id === token.id);
   if (price?.priceData) {
     if (price.priceData.price) {
       return new Decimal(price.priceData.price);
@@ -84,7 +98,7 @@ function getPythPriceForToken(token: SupportedToken, prices: PythPrice[]) {
       return new Decimal(price.priceData.previousPrice);
     }
   }
-  throw Error(`Could not get price from Pyth for ${token}`);
+  throw Error(`Could not get price from Pyth for ${token.name}`);
 }
 
 export const getTotalCollateral = async (prices: PythPrice[], market: BorrowingMarketState) => {
@@ -92,12 +106,12 @@ export const getTotalCollateral = async (prices: PythPrice[], market: BorrowingM
     logger.error({ message: 'error getting price from pyth', markets: prices });
     throw Error('Could not get prices from Pyth');
   }
-  let collateralTotals: CollateralTotals[] = [];
+  let collateralTotals = [];
   let total = new Decimal(0);
   let inactive = new Decimal(0);
   let deposited = new Decimal(0);
-  for (const token of SUPPORTED_TOKENS) {
-    const coll = getTokenCollateral(token, market.depositedCollateral, market.inactiveCollateral, prices);
+  for (const token of CollateralTokens) {
+    const coll = getTotalTokenCollateral(token, prices, market);
     collateralTotals.push(coll);
     total = total.add(coll.deposited.add(coll.inactive).mul(coll.price));
     inactive = inactive.add(coll.inactive.mul(coll.price));

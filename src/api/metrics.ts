@@ -2,15 +2,15 @@ import { HBB_DECIMALS, STABLECOIN_DECIMALS } from '../constants/math';
 import { MetricsResponse } from '../models/api/MetricsResponse';
 import { ENV, Web3Client } from '../services/web3/client';
 import * as hdr from 'hdr-histogram-js';
-import { SUPPORTED_TOKENS } from '../constants/tokens';
+import { CollateralTokens } from '../constants/tokens';
 import { d3BinsToResponse, getPercentiles } from '../utils/histogramUtils';
 import { OrcaPriceService } from '../services/price/OrcaPriceService';
 import {
   calculateCollateralRatio,
   calculateStabilityProvided,
-  getTokenCollateral,
   getTotalCollateral,
   maxMinAvg,
+  getTotalTokenCollateral,
 } from '../utils/calculations';
 import { SaberPriceService } from '../services/price/SaberPriceService';
 import { JupiterPriceService } from '../services/price/JupiterPriceService';
@@ -129,8 +129,8 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
       borrowers.add(userVault.owner.toString());
 
       let collateralTotal = new Decimal(0);
-      for (const token of SUPPORTED_TOKENS) {
-        const coll = getTokenCollateral(token, userVault.depositedCollateral, userVault.inactiveCollateral, pythPrices);
+      for (const token of CollateralTokens) {
+        const coll = getTotalTokenCollateral(token, pythPrices, borrowingMarketState);
         collateralTotal = collateralTotal.add(coll.deposited.mul(coll.price));
       }
       const collRatio = calculateCollateralRatio(borrowedStablecoin, collateralTotal);
@@ -161,7 +161,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
         inactive: collateral.inactive,
         deposited: collateral.deposited,
         depositedTokens: collateral.tokens.map((x) => ({
-          name: x.token,
+          name: x.token.name,
           amount: x.deposited,
           price: x.price,
         })),
