@@ -4,7 +4,7 @@ import { ENV, Web3Client } from '../services/web3/client';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { badRequest, internalError, notFound, sendWithCacheControl } from '../utils/apiUtils';
 import { tryGetPublicKeyFromString } from '../utils/tokenUtils';
-import { SUPPORTED_TOKENS } from '../constants/tokens';
+import { CollateralTokens } from '../constants/tokens';
 import { Hubble, UserMetadata, UserMetadataWithJson } from '@hubbleprotocol/hubble-sdk';
 import Decimal from 'decimal.js';
 import { calculateCollateralRatio, getNextSnapshotDate, getTokenCollateral } from '../utils/calculations';
@@ -20,6 +20,7 @@ import { getLoanHistoryRedisKey, getLoanRedisKey, getLoansRedisKey } from '../se
 import { LOANS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
 import { middleware } from './middleware/middleware';
+import TokenCollateral from '../models/api/TokenCollateral';
 
 /**
  * Get live Hubble on-chain loan data
@@ -188,8 +189,8 @@ async function getLoan(env: ENV, loanPubkey: PublicKey) {
 function getLoanFromUserVault(userVault: UserMetadata | UserMetadataWithJson, pythPrices: PythPrice[]) {
   const borrowedStablecoin = userVault.borrowedStablecoin.dividedBy(STABLECOIN_DECIMALS);
   let collateralTotal = new Decimal(0);
-  const collateralTotals = [];
-  for (const token of SUPPORTED_TOKENS) {
+  const collateralTotals: TokenCollateral[] = [];
+  for (const token of CollateralTokens) {
     const coll = getTokenCollateral(token, userVault.depositedCollateral, userVault.inactiveCollateral, pythPrices);
     collateralTotals.push(coll);
     collateralTotal = collateralTotal.add(coll.deposited.mul(coll.price));
@@ -200,7 +201,12 @@ function getLoanFromUserVault(userVault: UserMetadata | UserMetadataWithJson, py
   const loan = {
     loanToValue: ltv,
     totalCollateralValue: collateralTotal,
-    collateral: collateralTotals,
+    collateral: collateralTotals.map((x) => ({
+      token: x.token.name,
+      price: x.price,
+      inactive: x.inactive,
+      deposited: x.deposited,
+    })),
     collateralRatio: collRatio,
     usdhDebt: borrowedStablecoin,
     metadataPk: userVault.metadataPk,

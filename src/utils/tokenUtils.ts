@@ -1,4 +1,4 @@
-import { SupportedToken } from '../constants/tokens';
+import { CollateralToken, CollateralTokens } from '../constants/tokens';
 import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import {
   DECIMALS_BTC,
@@ -6,43 +6,44 @@ import {
   DECIMALS_FTT,
   DECIMALS_RAY,
   DECIMALS_SRM,
+  LAMPORTS_PER_DAOSOL,
   LAMPORTS_PER_MSOL,
+  LAMPORTS_PER_STSOL,
 } from '../constants/math';
 import Decimal from 'decimal.js';
 import { TokenWithPubkey } from '../services/price/PythPriceService';
 import { HubbleConfig } from '@hubbleprotocol/hubble-config';
 
-export const lamportsToCollateral = (lamports: Decimal, token: SupportedToken): Decimal => {
+export const lamportsToCollateral = (lamports: Decimal, token: CollateralToken): Decimal => {
   let factor = LAMPORTS_PER_SOL;
-  switch (token) {
-    case 'SOL': {
+  switch (token.name) {
+    case 'SOL':
       factor = LAMPORTS_PER_SOL;
       break;
-    }
-    case 'mSOL': {
-      factor = LAMPORTS_PER_MSOL;
-      break;
-    }
-    case 'ETH': {
+    case 'ETH':
       factor = DECIMALS_ETH;
       break;
-    }
-    case 'BTC': {
+    case 'BTC':
       factor = DECIMALS_BTC;
       break;
-    }
-    case 'SRM': {
+    case 'SRM':
       factor = DECIMALS_SRM;
       break;
-    }
-    case 'RAY': {
+    case 'RAY':
       factor = DECIMALS_RAY;
       break;
-    }
-    case 'FTT': {
+    case 'FTT':
       factor = DECIMALS_FTT;
       break;
-    }
+    case 'MSOL':
+      factor = LAMPORTS_PER_MSOL;
+      break;
+    case 'DAOSOL':
+      factor = LAMPORTS_PER_DAOSOL;
+      break;
+    case 'STSOL':
+      factor = LAMPORTS_PER_STSOL;
+      break;
   }
 
   if (lamports.isZero()) {
@@ -61,12 +62,12 @@ export const tryGetPublicKeyFromString = (pubkey: string): PublicKey | undefined
 
 export const getPythTokens = (config: HubbleConfig): TokenWithPubkey[] => {
   return [
-    { token: 'BTC', pubkey: config.borrowing.accounts.pyth?.btcPriceInfo! },
-    { token: 'mSOL', pubkey: config.borrowing.accounts.pyth?.msolPriceInfo! },
-    { token: 'SRM', pubkey: config.borrowing.accounts.pyth?.srmPriceInfo! },
-    { token: 'RAY', pubkey: config.borrowing.accounts.pyth?.rayPriceInfo! },
-    { token: 'SOL', pubkey: config.borrowing.accounts.pyth?.solPriceInfo! },
-    { token: 'FTT', pubkey: config.borrowing.accounts.pyth?.fttPriceInfo! },
-    { token: 'ETH', pubkey: config.borrowing.accounts.pyth?.ethPriceInfo! },
+    { token: CollateralTokens.find((x) => x.name === 'BTC')!, pubkey: config.borrowing.accounts.pyth?.btcPriceInfo! },
+    { token: CollateralTokens.find((x) => x.name === 'MSOL')!, pubkey: config.borrowing.accounts.pyth?.msolPriceInfo! },
+    { token: CollateralTokens.find((x) => x.name === 'SRM')!, pubkey: config.borrowing.accounts.pyth?.srmPriceInfo! },
+    { token: CollateralTokens.find((x) => x.name === 'RAY')!, pubkey: config.borrowing.accounts.pyth?.rayPriceInfo! },
+    { token: CollateralTokens.find((x) => x.name === 'SOL')!, pubkey: config.borrowing.accounts.pyth?.solPriceInfo! },
+    { token: CollateralTokens.find((x) => x.name === 'FTT')!, pubkey: config.borrowing.accounts.pyth?.fttPriceInfo! },
+    { token: CollateralTokens.find((x) => x.name === 'ETH')!, pubkey: config.borrowing.accounts.pyth?.ethPriceInfo! },
   ];
 };

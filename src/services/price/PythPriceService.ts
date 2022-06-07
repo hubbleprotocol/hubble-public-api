@@ -1,17 +1,17 @@
 import { PublicKey } from '@solana/web3.js';
 import { Web3Client } from '../web3/client';
 import { parsePriceData, PriceData } from '@pythnetwork/client';
-import { SupportedToken } from '../../constants/tokens';
+import { CollateralToken, CollateralTokens } from '../../constants/tokens';
 import { HubbleConfig } from '@hubbleprotocol/hubble-config';
 import { getPythTokens } from '../../utils/tokenUtils';
 
 export type PythPrice = {
-  token: SupportedToken;
+  token: CollateralToken;
   priceData: PriceData | undefined;
 };
 
 export type TokenWithPubkey = {
-  token: SupportedToken;
+  token: CollateralToken;
   pubkey: PublicKey;
 };
 
@@ -24,22 +24,22 @@ export class PythPriceService {
     this._config = config;
   }
 
-  private getTokenFromPriceData = (priceData: PriceData): SupportedToken => {
+  private getTokenFromPriceData = (priceData: PriceData): CollateralToken => {
     switch (priceData.productAccountKey.toBase58()) {
       case this._config.borrowing.accounts.pyth?.btcProductInfo!.toBase58():
-        return 'BTC';
+        return CollateralTokens.find((x) => x.name === 'BTC')!;
       case this._config.borrowing.accounts.pyth?.ethProductInfo!.toBase58():
-        return 'ETH';
+        return CollateralTokens.find((x) => x.name === 'ETH')!;
       case this._config.borrowing.accounts.pyth?.fttProductInfo!.toBase58():
-        return 'FTT';
+        return CollateralTokens.find((x) => x.name === 'FTT')!;
       case this._config.borrowing.accounts.pyth?.msolProductInfo!.toBase58():
-        return 'mSOL';
+        return CollateralTokens.find((x) => x.name === 'MSOL')!;
       case this._config.borrowing.accounts.pyth?.rayProductInfo!.toBase58():
-        return 'RAY';
+        return CollateralTokens.find((x) => x.name === 'RAY')!;
       case this._config.borrowing.accounts.pyth?.solProductInfo!.toBase58():
-        return 'SOL';
+        return CollateralTokens.find((x) => x.name === 'SOL')!;
       case this._config.borrowing.accounts.pyth?.srmProductInfo!.toBase58():
-        return 'SRM';
+        return CollateralTokens.find((x) => x.name === 'SRM')!;
       default:
         throw Error('not supported price data token');
     }

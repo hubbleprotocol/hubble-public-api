@@ -1,5 +1,7 @@
 export const LAMPORTS_PER_SOL = 1_000_000_000;
 export const LAMPORTS_PER_MSOL = 1_000_000_000;
+export const LAMPORTS_PER_DAOSOL = 1_000_000_000;
+export const LAMPORTS_PER_STSOL = 1_000_000_000;
 export const DECIMALS_ETH = 1_000_000_00;
 export const DECIMALS_BTC = 1_000_000;
 export const DECIMALS_FTT = 1_000_000;
