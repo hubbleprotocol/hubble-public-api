@@ -183,6 +183,7 @@ async function fetchStaking(
       tvl: new Decimal(metrics.hbb.staked).mul(new Decimal(metrics.hbb.price)),
     },
     { name: 'USDH', apr: usdhApr, apy: aprToApy(usdhApr), tvl: metrics.usdh.stabilityPool },
+    { name: 'LidoRewards', apr: new Decimal(0.1), apy: aprToApy(new Decimal(0.1)), tvl: new Decimal(100000) },
   ];
 }
 
