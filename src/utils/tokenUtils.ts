@@ -63,7 +63,7 @@ export const tryGetPublicKeyFromString = (pubkey: string): PublicKey | undefined
 export const getPythTokens = (config: HubbleConfig): TokenWithPubkey[] => {
   return [
     { token: CollateralTokens.find((x) => x.name === 'BTC')!, pubkey: config.borrowing.accounts.pyth?.btcPriceInfo! },
-    { token: CollateralTokens.find((x) => x.name === 'MSOL')!, pubkey: config.borrowing.accounts.pyth?.msolPriceInfo! },
+    { token: CollateralTokens.find((x) => x.name === 'mSOL')!, pubkey: config.borrowing.accounts.pyth?.msolPriceInfo! },
     { token: CollateralTokens.find((x) => x.name === 'SRM')!, pubkey: config.borrowing.accounts.pyth?.srmPriceInfo! },
     { token: CollateralTokens.find((x) => x.name === 'RAY')!, pubkey: config.borrowing.accounts.pyth?.rayPriceInfo! },
     { token: CollateralTokens.find((x) => x.name === 'SOL')!, pubkey: config.borrowing.accounts.pyth?.solPriceInfo! },

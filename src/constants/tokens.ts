@@ -10,7 +10,7 @@ export const CollateralTokens: CollateralToken[] = [
   { id: 3, name: 'SRM' },
   { id: 4, name: 'RAY' },
   { id: 5, name: 'FTT' },
-  { id: 6, name: 'MSOL' },
+  { id: 6, name: 'mSOL' },
   // { id: 7, name: 'DAOSOL' },
   // { id: 8, name: 'STSOL' },
   // { id: 100, name: 'OTHER' },

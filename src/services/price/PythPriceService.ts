@@ -33,7 +33,7 @@ export class PythPriceService {
       case this._config.borrowing.accounts.pyth?.fttProductInfo!.toBase58():
         return CollateralTokens.find((x) => x.name === 'FTT')!;
       case this._config.borrowing.accounts.pyth?.msolProductInfo!.toBase58():
-        return CollateralTokens.find((x) => x.name === 'MSOL')!;
+        return CollateralTokens.find((x) => x.name === 'mSOL')!;
       case this._config.borrowing.accounts.pyth?.rayProductInfo!.toBase58():
         return CollateralTokens.find((x) => x.name === 'RAY')!;
       case this._config.borrowing.accounts.pyth?.solProductInfo!.toBase58():
