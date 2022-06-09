@@ -73,7 +73,7 @@ export const getTokenCollateral = (
         price: getPythPriceForToken(token, prices),
         token,
       };
-    case 'MSOL':
+    case 'mSOL':
       return {
         deposited: lamportsToCollateral(deposited.msol, token),
         inactive: lamportsToCollateral(inactive.msol, token),
