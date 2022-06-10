@@ -15,10 +15,11 @@ import redis, { CacheExpiryType } from '../services/redis/redis';
 import { StakingUserResponse } from '../models/api/StakingUserResponse';
 import { groupBy } from '../utils/arrayUtils';
 import { PublicKey } from '@solana/web3.js';
-import { STAKING_STATS_EXPIRY_IN_SECONDS } from '../constants/redis';
+import { LOANS_EXPIRY_IN_SECONDS, STAKING_STATS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import {
   getHbbStakersRedisKey,
   getLidoStakingRedisKey,
+  getLoansRedisKey,
   getMetricsRedisKey,
   getStakingRedisKey,
   getUsdhStakersRedisKey,
@@ -27,6 +28,7 @@ import { getMetricsBetween } from '../services/database';
 import { middleware } from './middleware/middleware';
 import { Scope, ScopeToken } from '@hubbleprotocol/scope-sdk';
 import { LidoResponse } from '../models/api/LidoResponse';
+import { fetchAllLoans } from './loans';
 
 /**
  * Get staking stats of HBB and USDH (APR+APY)
@@ -254,17 +256,17 @@ function aprToApy(apr: Decimal) {
 async function fetchLidoRewards(env: ENV, web3Client: Web3Client): Promise<LidoResponse> {
   const scope = new Scope(env, web3Client.connection);
   const ldoPrice = await scope.getPrice('LDO/USD');
-  return calculateLidoRewards(ldoPrice);
+  return calculateLidoRewards(ldoPrice, env);
 }
 
-function calculateLidoRewards(ldoPrice: ScopeToken): LidoResponse {
+async function calculateLidoRewards(ldoPrice: ScopeToken, env: ENV) {
   // 1. get total investment
   // crazy SQL query: get hubble loans that have existed for the past 14 days, -14days from the latest snapshots
   // filter these loans on sql side:
   // - during these 14 days loans need to have had >= 40% LTV, otherwise they aren't eligible
   // - they also need to hold 40% of total collateral value in stSOL or wstETH
   // return sum of all USDH debt -> this will return total investment value
-  const totalInvestment = getLidoTotalInvestment();
+  const totalInvestment = await getLidoTotalInvestment(env);
   // 2. get total return:
   // - calculate daily reward by getting LDO price and multiply it by 150
   // - daily reward * 365 = total return value
@@ -284,7 +286,14 @@ function calculateLidoTotalReturn(ldoPrice: Decimal) {
   return dailyReward.mul(365);
 }
 
-function getLidoTotalInvestment() {
+async function getLidoTotalInvestment(env: ENV) {
+  const loans = await redis.cacheFetchJson(getLoansRedisKey(env, false), () => fetchAllLoans(env, false), {
+    cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+    cacheExpirySeconds: LOANS_EXPIRY_IN_SECONDS,
+  });
+  //  had >= 40% LTV, otherwise they aren't eligible
+  // - they also need to hold 40% of total collateral value in stSOL or wstETH
+  // loans.filter((x) => x.loanToValue.greaterThanOrEqualTo(0.4) && x.collateral[0] === '');
   return new Decimal(1);
 }
 
