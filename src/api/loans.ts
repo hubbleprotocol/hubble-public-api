@@ -61,7 +61,7 @@ loansRoute.get(
   }
 );
 
-async function fetchAllLoans(env: ENV, includeJsonResponse: boolean) {
+export async function fetchAllLoans(env: ENV, includeJsonResponse: boolean) {
   let web3Client: Web3Client = new Web3Client(env);
   const hubbleSdk = new Hubble(env, web3Client.connection);
   const config = getConfigByCluster(env);
