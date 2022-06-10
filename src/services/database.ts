@@ -171,3 +171,12 @@ export const getMetricsBetween = async (cluster: ENV, from: Date, to: Date) => {
   }
   return snapshots;
 };
+
+export const getLidoTotalInvestment = () => {
+  // 1. get total investment
+  // SQL query: get hubble loans that have existed for the past 14 days, -14days from the latest snapshots
+  // filter these loans on sql side:
+  // - during these 14 days loans need to have had >= 40% LTV, otherwise they aren't eligible
+  // - they also need to hold 40% of total collateral value in stSOL or wstETH
+  // return sum of all USDH debt -> this is total investment value
+};

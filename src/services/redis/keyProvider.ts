@@ -5,6 +5,10 @@ export function getStakingRedisKey(env: ENV) {
   return `staking-${env}`;
 }
 
+export function getLidoStakingRedisKey(env: ENV) {
+  return `staking-lido-${env}`;
+}
+
 export function getHbbStakersRedisKey(env: ENV) {
   return `stakers-hbb-${env}`;
 }

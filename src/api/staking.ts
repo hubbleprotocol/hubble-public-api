@@ -18,12 +18,15 @@ import { PublicKey } from '@solana/web3.js';
 import { STAKING_STATS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import {
   getHbbStakersRedisKey,
+  getLidoStakingRedisKey,
   getMetricsRedisKey,
   getStakingRedisKey,
   getUsdhStakersRedisKey,
 } from '../services/redis/keyProvider';
 import { getMetricsBetween } from '../services/database';
 import { middleware } from './middleware/middleware';
+import { Scope, ScopeToken } from '@hubbleprotocol/scope-sdk';
+import { LidoResponse } from '../models/api/LidoResponse';
 
 /**
  * Get staking stats of HBB and USDH (APR+APY)
@@ -47,6 +50,29 @@ stakingRoute.get(
       } catch (e) {
         logger.error(e);
         response.status(internalError).send('Could not get staking stats');
+      }
+    } else {
+      response.status(unprocessable).send(error);
+    }
+  }
+);
+
+stakingRoute.get(
+  '/lido',
+  middleware.validateSolanaCluster,
+  async (request: Request<never, LidoResponse | string, never, EnvironmentQueryParams>, response) => {
+    const [web3Client, env, error] = parseFromQueryParams(request.query);
+    if (web3Client && env) {
+      const redisKey = getLidoStakingRedisKey(env);
+      try {
+        const lidoRewards = await redis.cacheFetchJson(redisKey, () => fetchLidoRewards(env, web3Client), {
+          cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+          cacheExpirySeconds: STAKING_STATS_EXPIRY_IN_SECONDS,
+        });
+        await sendWithCacheControl(redisKey, response, lidoRewards);
+      } catch (e) {
+        logger.error(e);
+        response.status(internalError).send('Could not get staking stats for lido rewards');
       }
     } else {
       response.status(unprocessable).send(error);
@@ -142,7 +168,6 @@ async function fetchStaking(
   response: Response
 ): Promise<StakingResponse[] | undefined> {
   const hubbleSdk = new Hubble(env, web3Client.connection);
-
   const from = new Date();
   from.setDate(from.getDate() - 7);
   from.setMinutes(0);
@@ -224,6 +249,43 @@ function calculateUsdhApr(globalConfig: GlobalConfig, metrics: MetricsResponse) 
 
 function aprToApy(apr: Decimal) {
   return apr.dividedBy(365).plus(1).pow(365).minus(1);
+}
+
+async function fetchLidoRewards(env: ENV, web3Client: Web3Client): Promise<LidoResponse> {
+  const scope = new Scope(env, web3Client.connection);
+  const ldoPrice = await scope.getPrice('LDO/USD');
+  return calculateLidoRewards(ldoPrice);
+}
+
+function calculateLidoRewards(ldoPrice: ScopeToken): LidoResponse {
+  // 1. get total investment
+  // crazy SQL query: get hubble loans that have existed for the past 14 days, -14days from the latest snapshots
+  // filter these loans on sql side:
+  // - during these 14 days loans need to have had >= 40% LTV, otherwise they aren't eligible
+  // - they also need to hold 40% of total collateral value in stSOL or wstETH
+  // return sum of all USDH debt -> this will return total investment value
+  const totalInvestment = getLidoTotalInvestment();
+  // 2. get total return:
+  // - calculate daily reward by getting LDO price and multiply it by 150
+  // - daily reward * 365 = total return value
+  const totalReturns = calculateLidoTotalReturn(ldoPrice.price);
+  // 3. APR = total return / total investment
+  //TODO: this is mock response that needs to be removed after the actual functionality is added
+  const apr = new Decimal(0.1) || new Decimal(totalReturns.dividedBy(totalInvestment));
+  return { apr: apr, apy: aprToApy(apr) };
+}
+
+/**
+ * To get LIDO total returns we need to calculate daily reward by multiplying LDO price with 150 and 365.
+ * @param ldoPrice
+ */
+function calculateLidoTotalReturn(ldoPrice: Decimal) {
+  const dailyReward = ldoPrice.mul(150);
+  return dailyReward.mul(365);
+}
+
+function getLidoTotalInvestment() {
+  return new Decimal(1);
 }
 
 export default stakingRoute;
