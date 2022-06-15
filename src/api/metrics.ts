@@ -29,13 +29,13 @@ import {
 import { bin } from 'd3-array';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import redis, { CacheExpiryType } from '../services/redis/redis';
-import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
 import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 import { getMetricsRedisKey } from '../services/redis/keyProvider';
 import { METRICS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
 import { internalError, sendWithCacheControl } from '../utils/apiUtils';
 import { middleware } from './middleware/middleware';
+import { Scope, ScopeToken } from '@hubbleprotocol/scope-sdk';
 
 /**
  * Get live Hubble on-chain metrics data
@@ -69,7 +69,6 @@ export async function getMetrics(env: ENV, key: string): Promise<MetricsResponse
 
 async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResponse> {
   let web3Client: Web3Client = new Web3Client(env);
-  const config = getConfigByCluster(env);
 
   //TODO: build own histogram implementation that supports Decimal instead of number..
   // or find a lib that does this already
@@ -83,7 +82,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
 
   try {
     const hubbleSdk = new Hubble(env, web3Client.connection);
-    const pythService = new PythPriceService(web3Client, config);
+    const scope = new Scope(env, web3Client.connection);
     const orcaService = new OrcaPriceService();
     const saberService = new SaberPriceService();
     const jupiterService = new JupiterPriceService();
@@ -92,7 +91,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
     // we use them in an array so we get type-safe array indexing later on, but order is important!
     const responses = await Promise.all([
       hubbleSdk.getBorrowingMarketState(),
-      pythService.getTokenPrices(),
+      scope.getAllPrices(),
       orcaService.getHbbPrice(),
       hubbleSdk.getAllUserMetadatas(),
       hubbleSdk.getStakingPoolState(),
@@ -108,7 +107,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
     const timestamp = new Date().valueOf();
 
     const borrowingMarketState: BorrowingMarketState = responses[0];
-    const pythPrices: PythPrice[] = responses[1];
+    const scopePrices: ScopeToken[] = responses[1];
     const hbbPrice: Decimal = responses[2].getRate();
     const userVaults: UserMetadata[] = responses[3];
     const stakingPool: StakingPoolState = responses[4];
@@ -120,7 +119,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
     const saberStats: PriceResponse = responses[10];
     const jupiterStats: PriceResponse = responses[11];
 
-    const collateral = await getTotalCollateral(pythPrices, borrowingMarketState);
+    const collateral = await getTotalCollateral(scopePrices, borrowingMarketState);
     const borrowers = new Set<string>();
     for (const userVault of userVaults.filter((x) => x.borrowedStablecoin.greaterThan(0))) {
       const borrowedStablecoin = userVault.borrowedStablecoin.dividedBy(STABLECOIN_DECIMALS);
@@ -130,7 +129,11 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
 
       let collateralTotal = new Decimal(0);
       for (const token of CollateralTokens) {
-        const coll = getTotalTokenCollateral(token, pythPrices, borrowingMarketState);
+        const scopeToken = scopePrices.find((x) => x.name === token);
+        if (!scopeToken) {
+          throw Error(`Could not get price for ${token} from scope oracle`);
+        }
+        const coll = getTotalTokenCollateral(scopeToken, borrowingMarketState);
         collateralTotal = collateralTotal.add(coll.deposited.mul(coll.price));
       }
       const collRatio = calculateCollateralRatio(borrowedStablecoin, collateralTotal);

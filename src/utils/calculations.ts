@@ -1,4 +1,3 @@
-import { CollateralToken, CollateralTokens } from '../constants/tokens';
 import { lamportsToCollateral } from './tokenUtils';
 import { SCALE_FACTOR } from '../constants/math';
 import Decimal from 'decimal.js';
@@ -8,110 +7,112 @@ import {
   StabilityPoolState,
   StabilityProviderState,
 } from '@hubbleprotocol/hubble-sdk';
-import logger from '../services/logger';
-import { PythPrice } from '../services/price/PythPriceService';
 import TokenCollateral from '../models/api/TokenCollateral';
+import { ScopeToken, SupportedToken } from '@hubbleprotocol/scope-sdk';
+import { CollateralTokens } from '../constants/tokens';
 
-export const getTotalTokenCollateral = (token: CollateralToken, prices: PythPrice[], market: BorrowingMarketState) => {
-  const price = getPythPriceForToken(token, prices);
+export const getTotalTokenCollateral = (token: ScopeToken, market: BorrowingMarketState) => {
   const deposited = lamportsToCollateral(market.depositedCollateral.amounts[token.id], token);
   const inactive = lamportsToCollateral(market.inactiveCollateral.amounts[token.id], token);
   return {
     deposited,
     inactive,
-    price,
+    price: token.price,
     token,
   };
 };
 
 export const getTokenCollateral = (
-  token: CollateralToken,
+  token: SupportedToken,
   deposited: CollateralAmounts,
   inactive: CollateralAmounts,
-  prices: PythPrice[]
-): TokenCollateral => {
-  switch (token.name) {
+  prices: ScopeToken[]
+): TokenCollateral | null => {
+  const scopeToken = prices.find((x) => x.name === token);
+  if (!scopeToken) {
+    throw Error(`Could not get price for ${token} from scope oracle`);
+  }
+  switch (token) {
     case 'SOL':
       return {
-        deposited: lamportsToCollateral(deposited.sol, token),
-        inactive: lamportsToCollateral(inactive.sol, token),
-        price: getPythPriceForToken(token, prices),
-        token,
+        deposited: lamportsToCollateral(deposited.sol, scopeToken),
+        inactive: lamportsToCollateral(inactive.sol, scopeToken),
+        price: scopeToken.price,
+        token: scopeToken.name,
       };
     case 'ETH':
       return {
-        deposited: lamportsToCollateral(deposited.eth, token),
-        inactive: lamportsToCollateral(inactive.eth, token),
-        price: getPythPriceForToken(token, prices),
-        token,
+        deposited: lamportsToCollateral(deposited.eth, scopeToken),
+        inactive: lamportsToCollateral(inactive.eth, scopeToken),
+        price: scopeToken.price,
+        token: scopeToken.name,
       };
     case 'BTC':
       return {
-        deposited: lamportsToCollateral(deposited.btc, token),
-        inactive: lamportsToCollateral(inactive.btc, token),
-        price: getPythPriceForToken(token, prices),
-        token,
+        deposited: lamportsToCollateral(deposited.btc, scopeToken),
+        inactive: lamportsToCollateral(inactive.btc, scopeToken),
+        price: scopeToken.price,
+        token: scopeToken.name,
       };
     case 'SRM':
       return {
-        deposited: lamportsToCollateral(deposited.srm, token),
-        inactive: lamportsToCollateral(inactive.srm, token),
-        price: getPythPriceForToken(token, prices),
-        token,
+        deposited: lamportsToCollateral(deposited.srm, scopeToken),
+        inactive: lamportsToCollateral(inactive.srm, scopeToken),
+        price: scopeToken.price,
+        token: scopeToken.name,
       };
     case 'RAY':
       return {
-        deposited: lamportsToCollateral(deposited.ray, token),
-        inactive: lamportsToCollateral(inactive.ray, token),
-        price: getPythPriceForToken(token, prices),
-        token,
+        deposited: lamportsToCollateral(deposited.ray, scopeToken),
+        inactive: lamportsToCollateral(inactive.ray, scopeToken),
+        price: scopeToken.price,
+        token: scopeToken.name,
       };
     case 'FTT':
       return {
-        deposited: lamportsToCollateral(deposited.ftt, token),
-        inactive: lamportsToCollateral(inactive.ftt, token),
-        price: getPythPriceForToken(token, prices),
-        token,
+        deposited: lamportsToCollateral(deposited.ftt, scopeToken),
+        inactive: lamportsToCollateral(inactive.ftt, scopeToken),
+        price: scopeToken.price,
+        token: scopeToken.name,
       };
-    case 'mSOL':
+    case 'MSOL':
       return {
-        deposited: lamportsToCollateral(deposited.msol, token),
-        inactive: lamportsToCollateral(inactive.msol, token),
-        price: getPythPriceForToken(token, prices),
-        token,
+        deposited: lamportsToCollateral(deposited.msol, scopeToken),
+        inactive: lamportsToCollateral(inactive.msol, scopeToken),
+        price: scopeToken.price,
+        token: scopeToken.name,
       };
-    default:
-      throw Error('not supported');
+    default: {
+      const depositedColl = deposited.extraCollaterals.find(
+        (x) => !x.amount.isZero() && x.tokenId.toNumber() === scopeToken.id
+      );
+      const inactiveColl = inactive.extraCollaterals.find(
+        (x) => !x.amount.isZero() && x.tokenId.toNumber() === scopeToken.id
+      );
+      if (!depositedColl || !inactiveColl) {
+        return null;
+      }
+      return {
+        deposited: lamportsToCollateral(depositedColl.amount, scopeToken),
+        inactive: lamportsToCollateral(inactiveColl.amount, scopeToken),
+        price: scopeToken.price,
+        token: scopeToken.name,
+      };
+    }
   }
 };
 
-function getPythPriceForToken(token: CollateralToken, prices: PythPrice[]) {
-  const price = prices.find((x) => x.token.id === token.id);
-  if (price?.priceData) {
-    if (price.priceData.price) {
-      return new Decimal(price.priceData.price);
-    } else {
-      logger.info({
-        message: `Current ${token} Pyth price is not valid, using previous price`,
-        previousPrice: price.priceData.previousPrice,
-      });
-      return new Decimal(price.priceData.previousPrice);
-    }
-  }
-  throw Error(`Could not get price from Pyth for ${token.name}`);
-}
-
-export const getTotalCollateral = async (prices: PythPrice[], market: BorrowingMarketState) => {
-  if (prices.find((x) => !x.priceData)) {
-    logger.error({ message: 'error getting price from pyth', markets: prices });
-    throw Error('Could not get prices from Pyth');
-  }
+export const getTotalCollateral = async (prices: ScopeToken[], market: BorrowingMarketState) => {
   let collateralTotals = [];
   let total = new Decimal(0);
   let inactive = new Decimal(0);
   let deposited = new Decimal(0);
   for (const token of CollateralTokens) {
-    const coll = getTotalTokenCollateral(token, prices, market);
+    const scopeToken = prices.find((x) => x.name === token);
+    if (!scopeToken) {
+      throw Error(`Could not get price for ${token} from scope oracle`);
+    }
+    const coll = getTotalTokenCollateral(scopeToken, market);
     collateralTotals.push(coll);
     total = total.add(coll.deposited.add(coll.inactive).mul(coll.price));
     inactive = inactive.add(coll.inactive.mul(coll.price));

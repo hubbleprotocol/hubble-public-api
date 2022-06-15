@@ -255,7 +255,7 @@ function aprToApy(apr: Decimal) {
 
 async function fetchLidoRewards(env: ENV, web3Client: Web3Client): Promise<LidoResponse> {
   const scope = new Scope(env, web3Client.connection);
-  const ldoPrice = await scope.getPrice('LDO/USD');
+  const ldoPrice = await scope.getPrice('LDO');
   return calculateLidoRewards(ldoPrice, env);
 }
 
@@ -293,7 +293,7 @@ async function getLidoTotalInvestment(env: ENV) {
   });
   //  had >= 40% LTV, otherwise they aren't eligible
   // - they also need to hold 40% of total collateral value in stSOL or wstETH
-  // loans.filter((x) => x.loanToValue.greaterThanOrEqualTo(0.4) && x.collateral[0] === '');
+  // loans.filter((x) => x.loanToValue.greaterThanOrEqualTo(0.4) && x.collateral[0]. === '');
   return new Decimal(1);
 }
 

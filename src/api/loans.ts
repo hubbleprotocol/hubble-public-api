@@ -14,13 +14,12 @@ import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 import { PublicKey } from '@solana/web3.js';
 import { getLoanHistory } from '../services/database';
 import redis, { CacheExpiryType } from '../services/redis/redis';
-import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
-import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 import { getLoanHistoryRedisKey, getLoanRedisKey, getLoansRedisKey } from '../services/redis/keyProvider';
 import { LOANS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
 import { middleware } from './middleware/middleware';
 import TokenCollateral from '../models/api/TokenCollateral';
+import { Scope, ScopeToken } from '@hubbleprotocol/scope-sdk';
 
 /**
  * Get live Hubble on-chain loan data
@@ -64,17 +63,16 @@ loansRoute.get(
 export async function fetchAllLoans(env: ENV, includeJsonResponse: boolean) {
   let web3Client: Web3Client = new Web3Client(env);
   const hubbleSdk = new Hubble(env, web3Client.connection);
-  const config = getConfigByCluster(env);
-  const pythService = new PythPriceService(web3Client, config);
+  const scope = new Scope(env, web3Client.connection);
 
   const responses = await Promise.all([
-    pythService.getTokenPrices(),
+    scope.getAllPrices(),
     includeJsonResponse ? hubbleSdk.getAllUserMetadatasIncludeJsonResponse() : hubbleSdk.getAllUserMetadatas(),
   ]);
 
-  const pythPrices: PythPrice[] = responses[0];
+  const prices = responses[0];
   const userVaults = responses[1];
-  return getLoansFromUserVaults(userVaults, pythPrices);
+  return getLoansFromUserVaults(userVaults, prices);
 }
 
 export interface LoansParameters {
@@ -173,27 +171,28 @@ loansRoute.get(
 async function getLoan(env: ENV, loanPubkey: PublicKey) {
   let web3Client: Web3Client = new Web3Client(env);
   const hubbleSdk = new Hubble(env, web3Client.connection);
-  const config = getConfigByCluster(env);
-  const pythService = new PythPriceService(web3Client, config);
+  const scope = new Scope(env, web3Client.connection);
 
-  const responses = await Promise.all([pythService.getTokenPrices(), hubbleSdk.getUserMetadata(loanPubkey)]);
+  const responses = await Promise.all([scope.getAllPrices(), hubbleSdk.getUserMetadata(loanPubkey)]);
 
-  const pythPrices: PythPrice[] = responses[0];
+  const prices = responses[0];
   const userVault: UserMetadata | undefined = responses[1];
   if (userVault) {
-    return getLoanFromUserVault(userVault, pythPrices);
+    return getLoanFromUserVault(userVault, prices);
   }
   return null;
 }
 
-function getLoanFromUserVault(userVault: UserMetadata | UserMetadataWithJson, pythPrices: PythPrice[]) {
+function getLoanFromUserVault(userVault: UserMetadata | UserMetadataWithJson, prices: ScopeToken[]) {
   const borrowedStablecoin = userVault.borrowedStablecoin.dividedBy(STABLECOIN_DECIMALS);
   let collateralTotal = new Decimal(0);
   const collateralTotals: TokenCollateral[] = [];
   for (const token of CollateralTokens) {
-    const coll = getTokenCollateral(token, userVault.depositedCollateral, userVault.inactiveCollateral, pythPrices);
-    collateralTotals.push(coll);
-    collateralTotal = collateralTotal.add(coll.deposited.mul(coll.price));
+    const coll = getTokenCollateral(token, userVault.depositedCollateral, userVault.inactiveCollateral, prices);
+    if (coll) {
+      collateralTotals.push(coll);
+      collateralTotal = collateralTotal.add(coll.deposited.mul(coll.price));
+    }
   }
   const collRatio = calculateCollateralRatio(borrowedStablecoin, collateralTotal);
   const ltv = new Decimal(100).dividedBy(collRatio);
@@ -202,7 +201,7 @@ function getLoanFromUserVault(userVault: UserMetadata | UserMetadataWithJson, py
     loanToValue: ltv,
     totalCollateralValue: collateralTotal,
     collateral: collateralTotals.map((x) => ({
-      token: x.token.name,
+      token: x.token,
       price: x.price,
       inactive: x.inactive,
       deposited: x.deposited,
@@ -222,10 +221,10 @@ function getLoanFromUserVault(userVault: UserMetadata | UserMetadataWithJson, py
   return loan;
 }
 
-export function getLoansFromUserVaults(userVaults: UserMetadata[] | UserMetadataWithJson[], pythPrices: PythPrice[]) {
+export function getLoansFromUserVaults(userVaults: UserMetadata[] | UserMetadataWithJson[], prices: ScopeToken[]) {
   const loans: LoanResponse | LoanResponseWithJson[] = [];
   for (const userVault of userVaults.filter((x) => x.borrowedStablecoin.greaterThan(0))) {
-    const loan = getLoanFromUserVault(userVault, pythPrices);
+    const loan = getLoanFromUserVault(userVault, prices);
     loans.push(loan);
   }
   return loans;

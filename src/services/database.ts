@@ -103,7 +103,7 @@ export const getLoanHistory = async (loan: PublicKey, cluster: ENV) => {
     const totals: TokenCollateral[] = [];
     for (const row of loans) {
       totals.push({
-        token: CollateralTokens.find((x) => x.name.toLowerCase() === row.token_name.toLowerCase())!,
+        token: CollateralTokens.find((x) => x.toLowerCase() === row.token_name.toLowerCase())!,
         inactive: new Decimal(row.inactive_quantity),
         price: new Decimal(row.price),
         deposited: new Decimal(row.deposited_quantity),
@@ -115,7 +115,7 @@ export const getLoanHistory = async (loan: PublicKey, cluster: ENV) => {
       loan: {
         loanToValue: new Decimal(loan.loan_to_value),
         collateral: totals.map((x) => ({
-          token: x.token.name as SupportedToken,
+          token: x.token as SupportedToken,
           price: x.price,
           inactive: x.inactive,
           deposited: x.deposited,

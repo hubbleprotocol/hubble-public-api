@@ -7,14 +7,13 @@ import { badRequest, internalError, sendWithCacheControl } from '../utils/apiUti
 import { Hubble, UserMetadata } from '@hubbleprotocol/hubble-sdk';
 import Router from 'express-promise-router';
 import { getLoansFromUserVaults, LoansParameters } from './loans';
-import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
-import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
 import redis, { CacheExpiryType } from '../services/redis/redis';
 import { getOwnerRedisKey } from '../services/redis/keyProvider';
 import { PublicKey } from '@solana/web3.js';
 import { LOANS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
 import { middleware } from './middleware/middleware';
+import { Scope } from '@hubbleprotocol/scope-sdk';
 
 const ownersRoute = Router();
 
@@ -48,12 +47,11 @@ ownersRoute.get(
 async function getOwnerLoans(env: ENV, user: PublicKey) {
   let web3Client: Web3Client = new Web3Client(env);
   const hubbleSdk = new Hubble(env, web3Client.connection);
-  const config = getConfigByCluster(env);
-  const pythService = new PythPriceService(web3Client, config);
-  const responses = await Promise.all([pythService.getTokenPrices(), hubbleSdk.getUserMetadatas(user)]);
-  const pythPrices: PythPrice[] = responses[0];
+  const scope = new Scope(env, web3Client.connection);
+  const responses = await Promise.all([scope.getAllPrices(), hubbleSdk.getUserMetadatas(user)]);
+  const scopePrices = responses[0];
   const userVaults: UserMetadata[] = responses[1];
-  return getLoansFromUserVaults(userVaults, pythPrices);
+  return getLoansFromUserVaults(userVaults, scopePrices);
 }
 
 export default ownersRoute;
