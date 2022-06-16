@@ -101,6 +101,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
       hubbleSdk.getHbbTokenAccounts(),
       saberService.getStats(),
       jupiterService.getStats(),
+      hubbleSdk.getUsdhCirculatingSupply(),
     ]);
 
     const timestamp = new Date().valueOf();
@@ -117,6 +118,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
     const hbbProgramAccounts = responses[9];
     const saberStats: PriceResponse = responses[10];
     const jupiterStats: PriceResponse = responses[11];
+    const usdhCirculatingSupply: Decimal = responses[12];
 
     const collateral = await getTotalCollateral(scopePrices, borrowingMarketState);
     const borrowers = new Set<string>();
@@ -228,7 +230,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
       usdh: {
         stabilityPool: totalUsdh,
         stabilityPoolDistribution: getPercentiles(stabilityHistogram),
-        issued: borrowingMarketState.stablecoinBorrowed.dividedBy(STABLECOIN_DECIMALS),
+        issued: usdhCirculatingSupply,
         stabilityPoolBins: d3BinsToResponse(
           bin()
             .domain([0, maxStabilityBin])

@@ -43,7 +43,7 @@
     "@hubbleprotocol/hubble-config": "^1.0.50",
     "@hubbleprotocol/hubble-db": "^1.0.48",
     "@hubbleprotocol/hubble-idl": "^1.0.49",
-    "@hubbleprotocol/hubble-sdk": "^1.0.55",
+    "@hubbleprotocol/hubble-sdk": "^1.0.56",
     "@hubbleprotocol/scope-sdk": "^1.0.55",
     "@jup-ag/core": "^1.0.0-beta.27",
     "@orca-so/sdk": "^1.2.24",
