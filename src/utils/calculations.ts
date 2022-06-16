@@ -10,6 +10,7 @@ import {
 import TokenCollateral from '../models/api/TokenCollateral';
 import { ScopeToken, SupportedToken } from '@hubbleprotocol/scope-sdk';
 import { CollateralTokens } from '../constants/tokens';
+import { LoanResponseWithJson } from '../models/api/LoanResponse';
 
 export const getTotalTokenCollateral = (token: ScopeToken, market: BorrowingMarketState) => {
   const deposited = lamportsToCollateral(
@@ -197,4 +198,20 @@ export const getNextSnapshotDate = () => {
   expireAt.setMinutes(1);
   expireAt.setSeconds(0);
   return expireAt;
+};
+
+export interface LoanDistribution {
+  token: SupportedToken;
+  percentage: Decimal;
+}
+export const getLoanCollateralDistribution = (loan: LoanResponseWithJson) => {
+  const distribution: LoanDistribution[] = [];
+  for (const coll of loan.collateral) {
+    const collValue = coll.deposited.mul(coll.price);
+    distribution.push({
+      token: coll.token as SupportedToken,
+      percentage: collValue.dividedBy(loan.totalCollateralValue),
+    });
+  }
+  return distribution;
 };

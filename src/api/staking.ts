@@ -29,6 +29,7 @@ import { middleware } from './middleware/middleware';
 import { Scope, ScopeToken } from '@hubbleprotocol/scope-sdk';
 import { LidoResponse } from '../models/api/LidoResponse';
 import { fetchAllLoans } from './loans';
+import { getLoanCollateralDistribution } from '../utils/calculations';
 
 /**
  * Get staking stats of HBB and USDH (APR+APY)
@@ -261,7 +262,7 @@ async function fetchLidoRewards(env: ENV, web3Client: Web3Client): Promise<LidoR
 
 async function calculateLidoRewards(ldoPrice: ScopeToken, env: ENV) {
   // 1. get total investment
-  // crazy SQL query: get hubble loans that have existed for the past 14 days, -14days from the latest snapshots
+  // get hubble loans that have existed for the past 14 days, -14days from the latest snapshots
   // filter these loans on sql side:
   // - during these 14 days loans need to have had >= 40% LTV, otherwise they aren't eligible
   // - they also need to hold 40% of total collateral value in stSOL or wstETH
@@ -272,8 +273,11 @@ async function calculateLidoRewards(ldoPrice: ScopeToken, env: ENV) {
   // - daily reward * 365 = total return value
   const totalReturns = calculateLidoTotalReturn(ldoPrice.price);
   // 3. APR = total return / total investment
-  //TODO: this is mock response that needs to be removed after the actual functionality is added
-  const apr = new Decimal(0.1) || new Decimal(totalReturns.dividedBy(totalInvestment));
+  let apr = new Decimal(0);
+  if (!totalInvestment.isZero()) {
+    apr = new Decimal(totalReturns.dividedBy(totalInvestment));
+  }
+
   return { apr: apr, apy: aprToApy(apr) };
 }
 
@@ -291,10 +295,20 @@ async function getLidoTotalInvestment(env: ENV) {
     cacheExpiryType: CacheExpiryType.ExpireInSeconds,
     cacheExpirySeconds: LOANS_EXPIRY_IN_SECONDS,
   });
-  //  had >= 40% LTV, otherwise they aren't eligible
-  // - they also need to hold 40% of total collateral value in stSOL or wstETH
-  // loans.filter((x) => x.loanToValue.greaterThanOrEqualTo(0.4) && x.collateral[0]. === '');
-  return new Decimal(1);
+
+  let totalInvestment = new Decimal(0);
+  for (const loan of loans) {
+    const distribution = getLoanCollateralDistribution(loan);
+    const stSol = distribution.find((x) => x.token === 'STSOL')?.percentage || new Decimal(0);
+    const wstEth = distribution.find((x) => x.token === 'wstETH')?.percentage || new Decimal(0);
+    const totalLidoCollateralValue = stSol.plus(wstEth);
+    //  >= 40% LTV, otherwise they aren't eligible
+    // - they also need to hold 40% of total collateral value in stSOL or wstETH
+    if (totalLidoCollateralValue.greaterThanOrEqualTo(0.4) && loan.loanToValue.greaterThanOrEqualTo(0.4)) {
+      totalInvestment.add(loan.usdhDebt);
+    }
+  }
+  return totalInvestment;
 }
 
 export default stakingRoute;

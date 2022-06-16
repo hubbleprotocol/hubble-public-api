@@ -13,7 +13,6 @@ import {
 import { PublicKey } from '@solana/web3.js';
 import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 import Decimal from 'decimal.js';
-import { SupportedToken } from '@hubbleprotocol/hubble-sdk';
 import { ENV } from './web3/client';
 import { getEnvOrDefault, getEnvOrThrowInProduction } from '../utils/envUtils';
 import { groupBy } from '../utils/arrayUtils';
@@ -115,7 +114,7 @@ export const getLoanHistory = async (loan: PublicKey, cluster: ENV) => {
       loan: {
         loanToValue: new Decimal(loan.loan_to_value),
         collateral: totals.map((x) => ({
-          token: x.token as SupportedToken,
+          token: x.token,
           price: x.price,
           inactive: x.inactive,
           deposited: x.deposited,
