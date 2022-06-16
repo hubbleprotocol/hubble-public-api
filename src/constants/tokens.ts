@@ -22,3 +22,7 @@ export const CollateralTokens: CollateralToken[] = [
   { id: 10, name: 'wstETH' },
   { id: 11, name: 'LDO' },
 ];
+
+export const getCollateralToken = (token: string) => {
+  return CollateralTokens.find((x) => x.name.toLowerCase() === token.toLowerCase());
+};

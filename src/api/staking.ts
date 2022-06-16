@@ -299,8 +299,8 @@ async function getLidoTotalInvestment(env: ENV) {
   let totalInvestment = new Decimal(0);
   for (const loan of loans) {
     const distribution = getLoanCollateralDistribution(loan);
-    const stSol = distribution.find((x) => x.token === 'STSOL')?.percentage || new Decimal(0);
-    const wstEth = distribution.find((x) => x.token === 'wstETH')?.percentage || new Decimal(0);
+    const stSol = distribution.find((x) => x.token.toLowerCase() === 'stsol')?.percentage || new Decimal(0);
+    const wstEth = distribution.find((x) => x.token.toLowerCase() === 'stsol')?.percentage || new Decimal(0);
     const totalLidoCollateralValue = stSol.plus(wstEth);
     //  >= 40% LTV, otherwise they aren't eligible
     // - they also need to hold 40% of total collateral value in stSOL or wstETH

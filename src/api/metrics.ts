@@ -128,7 +128,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
 
       let collateralTotal = new Decimal(0);
       for (const token of CollateralTokens) {
-        const scopeToken = scopePrices.find((x) => x.name === token.name);
+        const scopeToken = scopePrices.find((x) => x.name.toLowerCase() === token.name.toLowerCase());
         if (!scopeToken) {
           throw Error(`Could not get price for ${token} from scope oracle`);
         }

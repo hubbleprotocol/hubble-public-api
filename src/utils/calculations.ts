@@ -35,7 +35,7 @@ export const getTokenCollateral = (
   inactive: CollateralAmounts,
   prices: ScopeToken[]
 ): TokenCollateral => {
-  const scopeToken = prices.find((x) => x.name === token);
+  const scopeToken = prices.find((x) => x.name.toLowerCase() === token.toLowerCase());
   if (!scopeToken) {
     throw Error(`Could not get price for ${token} from scope oracle`);
   }
@@ -113,7 +113,7 @@ export const getTotalCollateral = async (prices: ScopeToken[], market: Borrowing
   let inactive = new Decimal(0);
   let deposited = new Decimal(0);
   for (const token of CollateralTokens) {
-    const scopeToken = prices.find((x) => x.name === token.name);
+    const scopeToken = prices.find((x) => x.name.toLowerCase() === token.name.toLowerCase());
     if (!scopeToken) {
       throw Error(`Could not get price for ${token} from scope oracle`);
     }

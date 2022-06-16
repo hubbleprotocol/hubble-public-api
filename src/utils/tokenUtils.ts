@@ -11,7 +11,7 @@ import {
 } from '../constants/math';
 import Decimal from 'decimal.js';
 import { ScopeToken } from '@hubbleprotocol/scope-sdk';
-import { CollateralTokens } from '../constants/tokens';
+import { getCollateralToken } from '../constants/tokens';
 
 export const lamportsToCollateral = (lamports: Decimal, token: ScopeToken): Decimal => {
   let factor = LAMPORTS_PER_SOL;
@@ -74,7 +74,7 @@ export const tryGetPublicKeyFromString = (pubkey: string): PublicKey | undefined
  * Get hubble smart contracts extra collateral token id from scope token id
  */
 export const scopeTokenToCollateralToken = (token: ScopeToken) => {
-  const collateralToken = CollateralTokens.find((x) => x.name === token.name);
+  const collateralToken = getCollateralToken(token.name);
   if (!collateralToken) {
     throw Error(`${token.name} not yet supported in hubble smart contracts`);
   }
