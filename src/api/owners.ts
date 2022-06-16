@@ -14,6 +14,7 @@ import { LOANS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
 import { middleware } from './middleware/middleware';
 import { Scope } from '@hubbleprotocol/scope-sdk';
+import { CollateralTokens } from '../constants/tokens';
 
 const ownersRoute = Router();
 
@@ -48,7 +49,10 @@ async function getOwnerLoans(env: ENV, user: PublicKey) {
   let web3Client: Web3Client = new Web3Client(env);
   const hubbleSdk = new Hubble(env, web3Client.connection);
   const scope = new Scope(env, web3Client.connection);
-  const responses = await Promise.all([scope.getAllPrices(), hubbleSdk.getUserMetadatas(user)]);
+  const responses = await Promise.all([
+    scope.getPrices(CollateralTokens.map((x) => x.name)),
+    hubbleSdk.getUserMetadatas(user),
+  ]);
   const scopePrices = responses[0];
   const userVaults: UserMetadata[] = responses[1];
   return getLoansFromUserVaults(userVaults, scopePrices);

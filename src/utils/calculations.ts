@@ -1,4 +1,4 @@
-import { lamportsToCollateral } from './tokenUtils';
+import { lamportsToCollateral, scopeTokenToCollateralToken } from './tokenUtils';
 import { SCALE_FACTOR } from '../constants/math';
 import Decimal from 'decimal.js';
 import {
@@ -12,8 +12,14 @@ import { ScopeToken, SupportedToken } from '@hubbleprotocol/scope-sdk';
 import { CollateralTokens } from '../constants/tokens';
 
 export const getTotalTokenCollateral = (token: ScopeToken, market: BorrowingMarketState) => {
-  const deposited = lamportsToCollateral(market.depositedCollateral.amounts[token.id], token);
-  const inactive = lamportsToCollateral(market.inactiveCollateral.amounts[token.id], token);
+  const deposited = lamportsToCollateral(
+    market.depositedCollateral.amounts[scopeTokenToCollateralToken(token).id],
+    token
+  );
+  const inactive = lamportsToCollateral(
+    market.inactiveCollateral.amounts[scopeTokenToCollateralToken(token).id],
+    token
+  );
   return {
     deposited,
     inactive,
@@ -27,7 +33,7 @@ export const getTokenCollateral = (
   deposited: CollateralAmounts,
   inactive: CollateralAmounts,
   prices: ScopeToken[]
-): TokenCollateral | null => {
+): TokenCollateral => {
   const scopeToken = prices.find((x) => x.name === token);
   if (!scopeToken) {
     throw Error(`Could not get price for ${token} from scope oracle`);
@@ -83,18 +89,16 @@ export const getTokenCollateral = (
         token: scopeToken.name,
       };
     default: {
+      const collToken = scopeTokenToCollateralToken(scopeToken);
       const depositedColl = deposited.extraCollaterals.find(
-        (x) => !x.amount.isZero() && x.tokenId.toNumber() === scopeToken.id
+        (x) => !x.amount.isZero() && x.tokenId.toNumber() === collToken.id
       );
       const inactiveColl = inactive.extraCollaterals.find(
-        (x) => !x.amount.isZero() && x.tokenId.toNumber() === scopeToken.id
+        (x) => !x.amount.isZero() && x.tokenId.toNumber() === collToken.id
       );
-      if (!depositedColl || !inactiveColl) {
-        return null;
-      }
       return {
-        deposited: lamportsToCollateral(depositedColl.amount, scopeToken),
-        inactive: lamportsToCollateral(inactiveColl.amount, scopeToken),
+        deposited: depositedColl ? lamportsToCollateral(depositedColl.amount, scopeToken) : new Decimal(0),
+        inactive: inactiveColl ? lamportsToCollateral(inactiveColl.amount, scopeToken) : new Decimal(0),
         price: scopeToken.price,
         token: scopeToken.name,
       };
@@ -108,7 +112,7 @@ export const getTotalCollateral = async (prices: ScopeToken[], market: Borrowing
   let inactive = new Decimal(0);
   let deposited = new Decimal(0);
   for (const token of CollateralTokens) {
-    const scopeToken = prices.find((x) => x.name === token);
+    const scopeToken = prices.find((x) => x.name === token.name);
     if (!scopeToken) {
       throw Error(`Could not get price for ${token} from scope oracle`);
     }

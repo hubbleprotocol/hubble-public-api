@@ -29,7 +29,6 @@ import {
 import { bin } from 'd3-array';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import redis, { CacheExpiryType } from '../services/redis/redis';
-import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 import { getMetricsRedisKey } from '../services/redis/keyProvider';
 import { METRICS_EXPIRY_IN_SECONDS } from '../constants/redis';
 import logger from '../services/logger';
@@ -91,7 +90,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
     // we use them in an array so we get type-safe array indexing later on, but order is important!
     const responses = await Promise.all([
       hubbleSdk.getBorrowingMarketState(),
-      scope.getAllPrices(),
+      scope.getPrices(CollateralTokens.map((x) => x.name)),
       orcaService.getHbbPrice(),
       hubbleSdk.getAllUserMetadatas(),
       hubbleSdk.getStakingPoolState(),
@@ -129,7 +128,7 @@ async function fetchMetrics(env: ENV, numberOfBins: number): Promise<MetricsResp
 
       let collateralTotal = new Decimal(0);
       for (const token of CollateralTokens) {
-        const scopeToken = scopePrices.find((x) => x.name === token);
+        const scopeToken = scopePrices.find((x) => x.name === token.name);
         if (!scopeToken) {
           throw Error(`Could not get price for ${token} from scope oracle`);
         }

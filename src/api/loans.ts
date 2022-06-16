@@ -66,7 +66,7 @@ export async function fetchAllLoans(env: ENV, includeJsonResponse: boolean) {
   const scope = new Scope(env, web3Client.connection);
 
   const responses = await Promise.all([
-    scope.getAllPrices(),
+    scope.getPrices(CollateralTokens.map((x) => x.name)),
     includeJsonResponse ? hubbleSdk.getAllUserMetadatasIncludeJsonResponse() : hubbleSdk.getAllUserMetadatas(),
   ]);
 
@@ -173,7 +173,10 @@ async function getLoan(env: ENV, loanPubkey: PublicKey) {
   const hubbleSdk = new Hubble(env, web3Client.connection);
   const scope = new Scope(env, web3Client.connection);
 
-  const responses = await Promise.all([scope.getAllPrices(), hubbleSdk.getUserMetadata(loanPubkey)]);
+  const responses = await Promise.all([
+    scope.getPrices(CollateralTokens.map((x) => x.name)),
+    hubbleSdk.getUserMetadata(loanPubkey),
+  ]);
 
   const prices = responses[0];
   const userVault: UserMetadata | undefined = responses[1];
@@ -188,7 +191,7 @@ function getLoanFromUserVault(userVault: UserMetadata | UserMetadataWithJson, pr
   let collateralTotal = new Decimal(0);
   const collateralTotals: TokenCollateral[] = [];
   for (const token of CollateralTokens) {
-    const coll = getTokenCollateral(token, userVault.depositedCollateral, userVault.inactiveCollateral, prices);
+    const coll = getTokenCollateral(token.name, userVault.depositedCollateral, userVault.inactiveCollateral, prices);
     if (coll) {
       collateralTotals.push(coll);
       collateralTotal = collateralTotal.add(coll.deposited.mul(coll.price));

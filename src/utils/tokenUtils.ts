@@ -11,6 +11,7 @@ import {
 } from '../constants/math';
 import Decimal from 'decimal.js';
 import { ScopeToken } from '@hubbleprotocol/scope-sdk';
+import { CollateralTokens } from '../constants/tokens';
 
 export const lamportsToCollateral = (lamports: Decimal, token: ScopeToken): Decimal => {
   let factor = LAMPORTS_PER_SOL;
@@ -36,8 +37,17 @@ export const lamportsToCollateral = (lamports: Decimal, token: ScopeToken): Deci
     case 'MSOL':
       factor = LAMPORTS_PER_MSOL;
       break;
+    case 'scnSOL':
+      factor = LAMPORTS_PER_SOL;
+      break;
+    case 'daoSOL':
+      factor = LAMPORTS_PER_SOL;
+      break;
     case 'wstETH':
       factor = LAMPORTS_PER_WSTETH;
+      break;
+    case 'LDO':
+      factor = DECIMALS_ETH;
       break;
     case 'STSOL':
       factor = LAMPORTS_PER_STSOL;
@@ -58,4 +68,15 @@ export const tryGetPublicKeyFromString = (pubkey: string): PublicKey | undefined
   } catch {
     return undefined;
   }
+};
+
+/**
+ * Get hubble smart contracts extra collateral token id from scope token id
+ */
+export const scopeTokenToCollateralToken = (token: ScopeToken) => {
+  const collateralToken = CollateralTokens.find((x) => x.name === token.name);
+  if (!collateralToken) {
+    throw Error(`${token.name} not yet supported in hubble smart contracts`);
+  }
+  return collateralToken;
 };
