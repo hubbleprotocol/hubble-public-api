@@ -48,3 +48,7 @@ export function getOwnerRedisKey(owner: PublicKey, env: ENV) {
 export function getHistoryRedisKey(env: ENV, year: number) {
   return `history-${env}-${year}`;
 }
+
+export function getNotifiRedisKey(env: ENV, wallet: PublicKey) {
+  return `notifi-${env}-${wallet}`;
+}

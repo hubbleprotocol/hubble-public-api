@@ -6,7 +6,7 @@ import { tryGetPublicKeyFromString } from '../utils/tokenUtils';
 import { badRequest, internalError, sendWithCacheControl } from '../utils/apiUtils';
 import { Hubble, UserMetadata } from '@hubbleprotocol/hubble-sdk';
 import Router from 'express-promise-router';
-import { getLoansFromUserVaults, LoansParameters } from './loans';
+import { getLoansFromUserVaults, PubkeyParameter } from './loans';
 import { getConfigByCluster } from '@hubbleprotocol/hubble-config';
 import { PythPrice, PythPriceService } from '../services/price/PythPriceService';
 import redis, { CacheExpiryType } from '../services/redis/redis';
@@ -24,7 +24,7 @@ const ownersRoute = Router();
 ownersRoute.get(
   '/:pubkey/loans',
   middleware.validateSolanaCluster,
-  async (request: Request<LoansParameters, LoanResponse[] | string, never, EnvironmentQueryParams>, response) => {
+  async (request: Request<PubkeyParameter, LoanResponse[] | string, never, EnvironmentQueryParams>, response) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
     const user = tryGetPublicKeyFromString(request.params.pubkey);
     if (!user) {

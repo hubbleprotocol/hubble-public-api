@@ -13,6 +13,7 @@ import borrowingVersionRoute from './borrowing-version';
 import loansRoute from './loans';
 import ownersRoute from './owners';
 import stakingRoute from './staking';
+import notifiRoute from './notifi';
 
 const routes = Router();
 
@@ -30,6 +31,7 @@ routesList.push({ endpoint: '/borrowing-version', route: borrowingVersionRoute }
 routesList.push({ endpoint: '/loans', route: loansRoute });
 routesList.push({ endpoint: '/owners', route: ownersRoute });
 routesList.push({ endpoint: '/staking', route: stakingRoute });
+routesList.push({ endpoint: '/notifi', route: notifiRoute });
 
 for (const route of routesList) {
   routes.use(route.endpoint, route.route);

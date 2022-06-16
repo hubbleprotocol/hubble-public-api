@@ -77,7 +77,7 @@ export async function fetchAllLoans(env: ENV, includeJsonResponse: boolean) {
   return getLoansFromUserVaults(userVaults, pythPrices);
 }
 
-export interface LoansParameters {
+export interface PubkeyParameter {
   pubkey: string;
 }
 
@@ -93,7 +93,7 @@ type HistoryQueryParams = {
 loansRoute.get(
   '/:pubkey/history',
   middleware.validateSolanaCluster,
-  async (request: Request<LoansParameters, LoanHistoryResponse[] | string, never, HistoryQueryParams>, response) => {
+  async (request: Request<PubkeyParameter, LoanHistoryResponse[] | string, never, HistoryQueryParams>, response) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
     const loan = tryGetPublicKeyFromString(request.params.pubkey);
     if (!loan) {
@@ -145,7 +145,7 @@ function sendFilteredHistory(
 loansRoute.get(
   '/:pubkey',
   middleware.validateSolanaCluster,
-  async (request: Request<LoansParameters, LoanResponse | string, never, EnvironmentQueryParams>, response) => {
+  async (request: Request<PubkeyParameter, LoanResponse | string, never, EnvironmentQueryParams>, response) => {
     let env: ENV = request.query.env ?? 'mainnet-beta';
     const loanPubkey = tryGetPublicKeyFromString(request.params.pubkey);
     if (!loanPubkey) {
