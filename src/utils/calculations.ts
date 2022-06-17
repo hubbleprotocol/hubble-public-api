@@ -207,10 +207,10 @@ export interface LoanDistribution {
 export const getLoanCollateralDistribution = (loan: LoanResponseWithJson) => {
   const distribution: LoanDistribution[] = [];
   for (const coll of loan.collateral) {
-    const collValue = coll.deposited.mul(coll.price);
+    const collValue = new Decimal(coll.deposited).mul(new Decimal(coll.price));
     distribution.push({
       token: coll.token as SupportedToken,
-      percentage: collValue.dividedBy(loan.totalCollateralValue),
+      percentage: collValue.dividedBy(new Decimal(loan.totalCollateralValue)),
     });
   }
   return distribution;

@@ -303,8 +303,8 @@ async function getLidoTotalInvestment(env: ENV) {
     const totalLidoCollateralValue = stSol.plus(wstEth);
     //  >= 40% LTV, otherwise they aren't eligible
     // - they also need to hold 40% of total collateral value in stSOL or wstETH
-    if (totalLidoCollateralValue.greaterThanOrEqualTo(0.4) && loan.loanToValue.greaterThanOrEqualTo(0.4)) {
-      totalInvestment.add(loan.usdhDebt);
+    if (totalLidoCollateralValue.greaterThanOrEqualTo(0.4) && new Decimal(loan.loanToValue).greaterThanOrEqualTo(0.4)) {
+      totalInvestment.add(new Decimal(loan.usdhDebt));
     }
   }
   return totalInvestment;
