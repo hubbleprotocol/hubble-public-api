@@ -1,5 +1,10 @@
+import { SupportedToken } from '@hubbleprotocol/scope-sdk';
+
 export interface CollateralToken {
-  name: string;
+  name: SupportedToken;
+  /**
+   * Hubble smart contracts extra collateral ID
+   */
   id: number;
 }
 
@@ -10,8 +15,14 @@ export const CollateralTokens: CollateralToken[] = [
   { id: 3, name: 'SRM' },
   { id: 4, name: 'RAY' },
   { id: 5, name: 'FTT' },
-  { id: 6, name: 'mSOL' },
-  // { id: 7, name: 'DAOSOL' },
-  // { id: 8, name: 'STSOL' },
-  // { id: 100, name: 'OTHER' },
+  { id: 6, name: 'MSOL' },
+  { id: 7, name: 'daoSOL' },
+  { id: 8, name: 'STSOL' },
+  { id: 9, name: 'scnSOL' },
+  { id: 10, name: 'wstETH' },
+  { id: 11, name: 'LDO' },
 ];
+
+export const getCollateralToken = (token: string) => {
+  return CollateralTokens.find((x) => x.name.toLowerCase() === token.toLowerCase());
+};

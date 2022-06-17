@@ -13,13 +13,12 @@ import {
 import { PublicKey } from '@solana/web3.js';
 import { LoanHistoryResponse } from '../models/api/LoanHistoryResponse';
 import Decimal from 'decimal.js';
-import { SupportedToken } from '@hubbleprotocol/hubble-sdk';
 import { ENV } from './web3/client';
 import { getEnvOrDefault, getEnvOrThrowInProduction } from '../utils/envUtils';
 import { groupBy } from '../utils/arrayUtils';
 import { MetricsResponse } from '../models/api/MetricsResponse';
 import { MetricsSnapshot } from '../models/api/MetricsSnapshot';
-import { CollateralTokens } from '../constants/tokens';
+import { getCollateralToken } from '../constants/tokens';
 import TokenCollateral from '../models/api/TokenCollateral';
 
 export const connectionString = getEnvOrThrowInProduction(
@@ -103,7 +102,7 @@ export const getLoanHistory = async (loan: PublicKey, cluster: ENV) => {
     const totals: TokenCollateral[] = [];
     for (const row of loans) {
       totals.push({
-        token: CollateralTokens.find((x) => x.name.toLowerCase() === row.token_name.toLowerCase())!,
+        token: getCollateralToken(row.token_name)!.name,
         inactive: new Decimal(row.inactive_quantity),
         price: new Decimal(row.price),
         deposited: new Decimal(row.deposited_quantity),
@@ -115,7 +114,7 @@ export const getLoanHistory = async (loan: PublicKey, cluster: ENV) => {
       loan: {
         loanToValue: new Decimal(loan.loan_to_value),
         collateral: totals.map((x) => ({
-          token: x.token.name as SupportedToken,
+          token: x.token,
           price: x.price,
           inactive: x.inactive,
           deposited: x.deposited,

@@ -221,3 +221,9 @@ Get all USDH stakers (grouped by owner public key):
 ```http request
 GET https://api.hubbleprotocol.io/staking/usdh/users
 ```
+
+Get LIDO staking rewards (APR + APY):
+
+```http request
+GET https://api.hubbleprotocol.io/staking/lido
+```
