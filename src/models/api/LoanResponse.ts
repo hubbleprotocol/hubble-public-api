@@ -25,6 +25,8 @@ export type LoanResponse = {
   metadataPk: PublicKey;
   // Borrowing market state public key
   borrowingMarketState: PublicKey;
+  // Loan market type
+  marketType?: Decimal;
 };
 
 export type LoanResponseWithJson = {
@@ -52,4 +54,6 @@ export type LoanResponseWithJson = {
   borrowingMarketState: PublicKey;
   // Raw JSON RPC response
   jsonResponse: string;
+  // Loan market type
+  marketType?: Decimal;
 };

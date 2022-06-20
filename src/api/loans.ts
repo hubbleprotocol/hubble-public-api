@@ -217,6 +217,7 @@ function getLoanFromUserVault(userVault: UserMetadata | UserMetadataWithJson, pr
     userId: userVault.userId,
     borrowingMarketState: userVault.borrowingMarketState,
     version: userVault.version,
+    marketType: userVault.marketType,
   } as LoanResponseWithJson;
   if (userVault.hasOwnProperty('jsonResponse')) {
     loan.jsonResponse = (userVault as UserMetadataWithJson).jsonResponse;
