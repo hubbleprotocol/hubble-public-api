@@ -166,7 +166,7 @@ class RedisProvider {
         async () => {
           value = await get(key);
           if (value === undefined || value === null) {
-            await this._redlock.using([distributedLockKey], options.outerLockTimeoutMillis || 10_000, async () => {
+            await this._redlock.using([distributedLockKey], options.outerLockTimeoutMillis || 25_000, async () => {
               value = await get(key);
               if (value === undefined || value === null) {
                 value = await fetch();
@@ -177,7 +177,7 @@ class RedisProvider {
             });
           }
         },
-        { timeout: options.innerLockTimeoutMillis || 15_000 }
+        { timeout: options.innerLockTimeoutMillis || 30_000 }
       );
     }
     return value!;
