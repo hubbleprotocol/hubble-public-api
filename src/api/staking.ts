@@ -4,7 +4,7 @@ import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
 import { internalError, parseFromQueryParams, sendWithCacheControl, unprocessable } from '../utils/apiUtils';
 import { Hubble } from '@hubbleprotocol/hubble-sdk';
 import { StakingResponse } from '../models/api/StakingResponse';
-import logger from '../services/logger';
+import logger, { logObject } from '../services/logger';
 import Decimal from 'decimal.js';
 import { getMetrics } from './metrics';
 import GlobalConfig from '@hubbleprotocol/hubble-sdk/dist/models/GlobalConfig';
@@ -256,7 +256,9 @@ function aprToApy(apr: Decimal) {
 async function fetchLidoRewards(env: ENV, web3Client: Web3Client): Promise<LidoResponse> {
   const scope = new Scope(env, web3Client.connection);
   const ldoPrice = await scope.getPrice('LDO');
-  return calculateLidoRewards(ldoPrice, env);
+  const rewards = await calculateLidoRewards(ldoPrice, env);
+  logger.info('calculated lido rewards %O', rewards);
+  return rewards;
 }
 
 async function calculateLidoRewards(ldoPrice: ScopeToken, env: ENV) {
@@ -266,18 +268,18 @@ async function calculateLidoRewards(ldoPrice: ScopeToken, env: ENV) {
   // - during these 14 days loans need to have had >= 40% LTV, otherwise they aren't eligible
   // - they also need to hold 40% of total collateral value in stSOL or wstETH
   // return sum of all USDH debt -> this will return total investment value
-  const totalInvestment = await getLidoTotalInvestment(env);
+  const { totalInvestment, eligibleLoans } = await getLidoTotalInvestment(env);
   // 2. get total return:
   // - calculate daily reward by getting LDO price and multiply it by 150
   // - daily reward * 365 = total return value
-  const totalReturns = calculateLidoTotalReturn(ldoPrice.price);
+  const totalReturn = calculateLidoTotalReturn(ldoPrice.price);
   // 3. APR = total return / total investment
   let apr = new Decimal(0);
   if (!totalInvestment.isZero()) {
-    apr = new Decimal(totalReturns.dividedBy(totalInvestment));
+    apr = new Decimal(totalReturn.dividedBy(totalInvestment)).dividedBy(100);
   }
 
-  return { apr: apr, apy: aprToApy(apr) };
+  return { apr: apr, apy: aprToApy(apr), totalInvestment, eligibleLoans: new Decimal(eligibleLoans), totalReturn };
 }
 
 /**
@@ -298,6 +300,7 @@ async function getLidoTotalInvestment(env: ENV) {
   });
 
   let totalInvestment = new Decimal(0);
+  let eligibleLoans = 0;
   for (const loan of loans) {
     const distribution = getLoanCollateralDistribution(loan);
     const stSol = distribution.find((x) => x.token.toLowerCase() === 'stsol')?.percentage || new Decimal(0);
@@ -307,9 +310,10 @@ async function getLidoTotalInvestment(env: ENV) {
     // - they also need to hold 40% of total collateral value in stSOL or wstETH
     if (totalLidoCollateralValue.greaterThanOrEqualTo(0.4) && new Decimal(loan.loanToValue).greaterThanOrEqualTo(40)) {
       totalInvestment = totalInvestment.add(new Decimal(loan.usdhDebt));
+      eligibleLoans++;
     }
   }
-  return totalInvestment;
+  return { totalInvestment, eligibleLoans };
 }
 
 export default stakingRoute;
