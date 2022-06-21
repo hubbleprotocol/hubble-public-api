@@ -276,7 +276,7 @@ async function calculateLidoRewards(ldoPrice: ScopeToken, env: ENV) {
   // 3. APR = total return / total investment
   let apr = new Decimal(0);
   if (!totalInvestment.isZero()) {
-    apr = new Decimal(totalReturn.dividedBy(totalInvestment)).dividedBy(100);
+    apr = new Decimal(totalReturn.dividedBy(totalInvestment));
   }
 
   return { apr: apr, apy: aprToApy(apr), totalInvestment, eligibleLoans: new Decimal(eligibleLoans), totalReturn };
