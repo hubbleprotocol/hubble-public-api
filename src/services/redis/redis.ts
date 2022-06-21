@@ -161,24 +161,24 @@ class RedisProvider {
     let value = await get(key);
     if (value === undefined || value === null) {
       const distributedLockKey = `mutex-${key}`;
-      await this._localMutex.acquire(
-        distributedLockKey,
-        async () => {
+      // await this._localMutex.acquire(
+      //   distributedLockKey,
+      //   async () => {
+      value = await get(key);
+      if (value === undefined || value === null) {
+        await this._redlock.using([distributedLockKey], options.outerLockTimeoutMillis || 15_000, async () => {
           value = await get(key);
           if (value === undefined || value === null) {
-            await this._redlock.using([distributedLockKey], options.outerLockTimeoutMillis || 15_000, async () => {
-              value = await get(key);
-              if (value === undefined || value === null) {
-                value = await fetch();
-                if (value !== undefined && value !== null) {
-                  await save(key, value, this.getCacheExpiry(options));
-                }
-              }
-            });
+            value = await fetch();
+            if (value !== undefined && value !== null) {
+              await save(key, value, this.getCacheExpiry(options));
+            }
           }
-        },
-        { timeout: options.innerLockTimeoutMillis || 20_000 }
-      );
+        });
+      }
+      // },
+      // { timeout: options.innerLockTimeoutMillis || 20_000 }
+      // );
     }
     return value!;
   }
