@@ -301,12 +301,12 @@ async function getLidoTotalInvestment(env: ENV) {
   for (const loan of loans) {
     const distribution = getLoanCollateralDistribution(loan);
     const stSol = distribution.find((x) => x.token.toLowerCase() === 'stsol')?.percentage || new Decimal(0);
-    const wstEth = distribution.find((x) => x.token.toLowerCase() === 'stsol')?.percentage || new Decimal(0);
+    const wstEth = distribution.find((x) => x.token.toLowerCase() === 'wsteth')?.percentage || new Decimal(0);
     const totalLidoCollateralValue = stSol.plus(wstEth);
     //  >= 40% LTV, otherwise they aren't eligible
     // - they also need to hold 40% of total collateral value in stSOL or wstETH
-    if (totalLidoCollateralValue.greaterThanOrEqualTo(0.4) && new Decimal(loan.loanToValue).greaterThanOrEqualTo(0.4)) {
-      totalInvestment.add(new Decimal(loan.usdhDebt));
+    if (totalLidoCollateralValue.greaterThanOrEqualTo(0.4) && new Decimal(loan.loanToValue).greaterThanOrEqualTo(40)) {
+      totalInvestment = totalInvestment.add(new Decimal(loan.usdhDebt));
     }
   }
   return totalInvestment;
