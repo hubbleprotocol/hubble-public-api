@@ -293,6 +293,8 @@ async function getLidoTotalInvestment(env: ENV) {
   const loans = await redis.cacheFetchJson(getLoansRedisKey(env, false), () => fetchAllLoans(env, false), {
     cacheExpiryType: CacheExpiryType.ExpireInSeconds,
     cacheExpirySeconds: LOANS_EXPIRY_IN_SECONDS,
+    innerLockTimeoutMillis: 65_000,
+    outerLockTimeoutMillis: 60_000,
   });
 
   let totalInvestment = new Decimal(0);

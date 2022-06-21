@@ -63,6 +63,8 @@ export async function getMetrics(env: ENV, key: string): Promise<MetricsResponse
   return await redis.cacheFetchJson(key, () => fetchMetrics(env, bins), {
     cacheExpirySeconds: METRICS_EXPIRY_IN_SECONDS,
     cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+    innerLockTimeoutMillis: 65_000,
+    outerLockTimeoutMillis: 60_000,
   });
 }
 
