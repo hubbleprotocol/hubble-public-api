@@ -227,3 +227,10 @@ Get LIDO staking rewards (APR + APY):
 ```http request
 GET https://api.hubbleprotocol.io/staking/lido
 ```
+
+Get eligible loans for LIDO staking rewards for a specified time interval (start date is inclusive, end date is exclusive).
+If no start/end date is specified it will use `start date: today - 14 days` and `end date = today`.
+
+```http request
+GET https://api.hubbleprotocol.io/staking/lido/eligible-loans?env=devnet&start=2022-06-01&end=2022-07-01
+```
