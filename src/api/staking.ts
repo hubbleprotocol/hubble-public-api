@@ -1,10 +1,16 @@
 import Router from 'express-promise-router';
 import { Request, Response } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
-import { internalError, parseFromQueryParams, sendWithCacheControl, unprocessable } from '../utils/apiUtils';
+import {
+  badRequest,
+  internalError,
+  parseFromQueryParams,
+  sendWithCacheControl,
+  unprocessable,
+} from '../utils/apiUtils';
 import { Hubble } from '@hubbleprotocol/hubble-sdk';
 import { StakingResponse } from '../models/api/StakingResponse';
-import logger, { logObject } from '../services/logger';
+import logger from '../services/logger';
 import Decimal from 'decimal.js';
 import { getMetrics } from './metrics';
 import GlobalConfig from '@hubbleprotocol/hubble-sdk/dist/models/GlobalConfig';
@@ -15,21 +21,28 @@ import redis, { CacheExpiryType } from '../services/redis/redis';
 import { StakingUserResponse } from '../models/api/StakingUserResponse';
 import { groupBy } from '../utils/arrayUtils';
 import { PublicKey } from '@solana/web3.js';
-import { LOANS_EXPIRY_IN_SECONDS, STAKING_STATS_EXPIRY_IN_SECONDS } from '../constants/redis';
+import {
+  LIDO_ELIGIBLE_LOANS_EXPIRY_IN_SECONDS,
+  LOANS_EXPIRY_IN_SECONDS,
+  STAKING_STATS_EXPIRY_IN_SECONDS,
+} from '../constants/redis';
 import {
   getHbbStakersRedisKey,
+  getLidoEligibleLoansRedisKey,
   getLidoStakingRedisKey,
   getLoansRedisKey,
   getMetricsRedisKey,
   getStakingRedisKey,
   getUsdhStakersRedisKey,
 } from '../services/redis/keyProvider';
-import { getMetricsBetween } from '../services/database';
+import { getLidoEligibleLoans, getMetricsBetween } from '../services/database';
 import { middleware } from './middleware/middleware';
 import { Scope, ScopeToken } from '@hubbleprotocol/scope-sdk';
 import { LidoResponse } from '../models/api/LidoResponse';
 import { fetchAllLoans } from './loans';
 import { getLoanCollateralDistribution } from '../utils/calculations';
+import EligibleLoansResponse from '../models/api/EligibleLoansResponse';
+import { subtractDays } from '../utils/dateUtils';
 
 /**
  * Get staking stats of HBB and USDH (APR+APY)
@@ -60,6 +73,9 @@ stakingRoute.get(
   }
 );
 
+/**
+ * Get LIDO rewards stats
+ */
 stakingRoute.get(
   '/lido',
   middleware.validateSolanaCluster,
@@ -76,6 +92,46 @@ stakingRoute.get(
       } catch (e) {
         logger.error(e);
         response.status(internalError).send('Could not get staking stats for lido rewards');
+      }
+    } else {
+      response.status(unprocessable).send(error);
+    }
+  }
+);
+
+interface EligibleLoansQueryParams {
+  start: string | undefined;
+  end: string | undefined;
+  env: ENV | undefined;
+}
+
+/**
+ * Get all loans that are eligible for LDO rewards
+ */
+stakingRoute.get(
+  '/lido/eligible-loans',
+  middleware.validateSolanaCluster,
+  async (request: Request<never, EligibleLoansResponse | string, never, EligibleLoansQueryParams>, response) => {
+    if ((request.query.start && !request.query.end) || (!request.query.start && request.query.end)) {
+      response.status(badRequest).send('You must specify both start and end query params or none of them.');
+      return;
+    }
+    const startDate = request.query.start ? new Date(request.query.start) : subtractDays(new Date(), 14);
+    const endDate = request.query.end ? new Date(request.query.end) : new Date();
+    const [web3Client, env, error] = parseFromQueryParams({ env: request.query.env });
+    if (web3Client && env) {
+      const redisKey = getLidoEligibleLoansRedisKey(env, startDate, endDate);
+      try {
+        const eligibleLoans = await redis.cacheFetchJson(redisKey, () => fetchEligibleLoans(env, startDate, endDate), {
+          cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+          cacheExpirySeconds: LIDO_ELIGIBLE_LOANS_EXPIRY_IN_SECONDS,
+        });
+        await sendWithCacheControl(redisKey, response, {
+          eligibleLoans: eligibleLoans.map((x) => x.user_metadata_pubkey),
+        });
+      } catch (e) {
+        logger.error(e);
+        response.status(internalError).send('Could not get eligible loans for lido rewards');
       }
     } else {
       response.status(unprocessable).send(error);
@@ -134,6 +190,10 @@ stakingRoute.get(
     }
   }
 );
+
+async function fetchEligibleLoans(env: ENV, start: Date, end: Date) {
+  return await getLidoEligibleLoans(env, start, end);
+}
 
 async function fetchHbbStakers(env: ENV, web3Client: Web3Client) {
   const hbbStakers: StakingUserResponse[] = [];
