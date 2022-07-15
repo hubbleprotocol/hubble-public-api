@@ -37,10 +37,11 @@ BEGIN
                       and coll.deposited_quantity > 0
                       and l.created_on >= start_date
                       and l.created_on <= end_date
-                    group by 1, 2, 3) res
+                    group by 1, 2, 3
+                    having avg(l.loan_to_value) >= 40) res --loan_to_value is in percentage format, not in decimal format, 40% = 0.4
               group by 1, 2) res
         group by 1, res.to_date, res.from_date
-        having sum(avg_coll_percent) > 0.4
+        having sum(avg_coll_percent) >= 0.4
            and (res.to_date::date - res.from_date::date) >= (end_date::date - start_date::date) - 1;
 END
 $func$ LANGUAGE plpgsql;
