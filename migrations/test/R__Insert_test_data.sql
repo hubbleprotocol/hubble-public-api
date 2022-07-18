@@ -113,3 +113,14 @@ INSERT INTO api.collateral (deposited_quantity, inactive_quantity, price, token_
 VALUES (1, 0, 2500, 12, 8);
 INSERT INTO api.collateral (deposited_quantity, inactive_quantity, price, token_id, loan_id)
 VALUES (50, 0, 100, 4, 8);
+
+INSERT INTO api.loan (user_metadata_pubkey, usdh_debt, created_on, total_collateral_value, collateral_ratio, loan_to_value, version, status, user_id,
+                      borrowing_market_state_pubkey, owner_id, raw_json)
+VALUES ('eligibleMultiCollateralX11xg6PFN2ZYExxRyZUaF', 5000, '2019-01-16 18:00:00.000+00', 10000, 50, 50, 0, 1, 200,
+        'FqkHHpETrpfgcA5SeH7PKKFDLGWM4tM7ZV31HfutTXNV', 1, '{}');
+INSERT INTO api.collateral (deposited_quantity, inactive_quantity, price, token_id, loan_id)
+VALUES (10, 0, 250, 10, 9);
+INSERT INTO api.collateral (deposited_quantity, inactive_quantity, price, token_id, loan_id)
+VALUES (1, 0, 2500, 12, 9);
+INSERT INTO api.collateral (deposited_quantity, inactive_quantity, price, token_id, loan_id)
+VALUES (50, 0, 100, 4, 9);
