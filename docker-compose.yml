@@ -51,3 +51,24 @@ services:
     volumes:
       - ./migrations/sql:/flyway/sql
       - ./migrations/conf:/flyway/conf
+  test-db:
+    image: postgres:14.2-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=test
+      - POSTGRES_PASSWORD=test
+      - POSTGRES_DB=test
+  test-flyway:
+    image: flyway/flyway:8.5.4-alpine
+    command: migrate
+    depends_on:
+      - test-db
+    environment:
+      - MIGRATION_POSTGRES_USER=test
+      - MIGRATION_POSTGRES_PASSWORD=test
+      - MIGRATION_POSTGRES_URL=jdbc:postgresql://test-db:5432/test
+    volumes:
+      - ./migrations/sql:/flyway/sql
+      - ./migrations/test/R__Insert_test_data.sql:/flyway/sql/R__Insert_test_data.sql
+      - ./migrations/conf:/flyway/conf

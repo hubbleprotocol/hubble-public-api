@@ -54,6 +54,15 @@ export const testDbConnection = async (): Promise<any> => {
   }
 };
 
+export const disconnect = (): Promise<void> => {
+  try {
+    return postgres.destroy();
+  } catch (err) {
+    logger.error('could not disconnect from postgres', err);
+    throw err;
+  }
+};
+
 type JoinedLoanRow = {
   usdh_debt: string;
   total_collateral_value: string;

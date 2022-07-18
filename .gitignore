@@ -242,3 +242,4 @@ dist
 
 # Local DynamoDB instance database files
 /docker/dynamodb/
+/migrations/sql/R__Insert_test_data.sql
