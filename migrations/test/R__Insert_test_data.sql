@@ -8,7 +8,7 @@ TRUNCATE table api.loan,
     api.borrowing_market_state,
     api.owner,
     api.token,
-    api.cluster;
+    api.cluster RESTART IDENTITY CASCADE;
 
 INSERT INTO api.cluster (name)
 values ('devnet'); --1
@@ -86,3 +86,30 @@ VALUES ('notEligibleOneCollateralX1xg6PFN2ZYExxRyZUaF', 70, '2020-01-17 10:00:00
         'FqkHHpETrpfgcA5SeH7PKKFDLGWM4tM7ZV31HfutTXNV', 1, '{}');
 INSERT INTO api.collateral (deposited_quantity, inactive_quantity, price, token_id, loan_id)
 VALUES (5, 0, 20, 10, 6);
+
+-- insert a loan with: 5,000 USDH debt, total collateral $10,000, CR 50%, LTV 50%, with multiple collateral:
+-- - 10 STSOL with price: $250 -> $2500
+-- - 1 wstETH with price: $2500 -> $2500
+-- - 50 SOL with price: $100 -> $5000
+-- this loan should be eligible for LDO rewards
+INSERT INTO api.loan (user_metadata_pubkey, usdh_debt, created_on, total_collateral_value, collateral_ratio, loan_to_value, version, status, user_id,
+                      borrowing_market_state_pubkey, owner_id, raw_json)
+VALUES ('eligibleMultiCollateralX11xg6PFN2ZYExxRyZUaF', 5000, '2019-01-15 06:00:00.000+00', 10000, 50, 50, 0, 1, 200,
+        'FqkHHpETrpfgcA5SeH7PKKFDLGWM4tM7ZV31HfutTXNV', 1, '{}');
+INSERT INTO api.collateral (deposited_quantity, inactive_quantity, price, token_id, loan_id)
+VALUES (10, 0, 250, 10, 7);
+INSERT INTO api.collateral (deposited_quantity, inactive_quantity, price, token_id, loan_id)
+VALUES (1, 0, 2500, 12, 7);
+INSERT INTO api.collateral (deposited_quantity, inactive_quantity, price, token_id, loan_id)
+VALUES (50, 0, 100, 4, 7);
+
+INSERT INTO api.loan (user_metadata_pubkey, usdh_debt, created_on, total_collateral_value, collateral_ratio, loan_to_value, version, status, user_id,
+                      borrowing_market_state_pubkey, owner_id, raw_json)
+VALUES ('eligibleMultiCollateralX11xg6PFN2ZYExxRyZUaF', 5000, '2019-01-16 17:00:00.000+00', 10000, 50, 50, 0, 1, 200,
+        'FqkHHpETrpfgcA5SeH7PKKFDLGWM4tM7ZV31HfutTXNV', 1, '{}');
+INSERT INTO api.collateral (deposited_quantity, inactive_quantity, price, token_id, loan_id)
+VALUES (10, 0, 250, 10, 8);
+INSERT INTO api.collateral (deposited_quantity, inactive_quantity, price, token_id, loan_id)
+VALUES (1, 0, 2500, 12, 8);
+INSERT INTO api.collateral (deposited_quantity, inactive_quantity, price, token_id, loan_id)
+VALUES (50, 0, 100, 4, 8);

@@ -10,7 +10,7 @@ describe('Lido rewards calculation tests', () => {
     await disconnect();
   });
 
-  it('should get an eligible loan', async () => {
+  it('should get an eligible loan with single STSOL collateral', async () => {
     const expectedToBeEligible = 'eligibleOneCollateral8kzX1xg6PFN2ZYExxRyZUaF';
     const actualLoan = (
       await getLidoEligibleLoans(
@@ -22,7 +22,7 @@ describe('Lido rewards calculation tests', () => {
     expect(actualLoan?.user_metadata_pubkey).toBe(expectedToBeEligible);
   });
 
-  it('should verify a non eligible loan is not included', async () => {
+  it('should verify a STSOL loan with <40% LTV is not eligible', async () => {
     const notExpectedToBeEligible = 'notEligibleOneCollateralX1xg6PFN2ZYExxRyZUaF';
     const actualLoan = (
       await getLidoEligibleLoans(
@@ -32,5 +32,17 @@ describe('Lido rewards calculation tests', () => {
       )
     ).find((x) => x.user_metadata_pubkey === notExpectedToBeEligible);
     expect(actualLoan).toBeUndefined();
+  });
+
+  it('should verify a multi-collateral loan is eligible', async () => {
+    const expectedToBeEligible = 'eligibleMultiCollateralX11xg6PFN2ZYExxRyZUaF';
+    const actualLoan = (
+      await getLidoEligibleLoans(
+        'devnet',
+        new Date('2019-01-15 00:00:00.000+00'),
+        new Date('2019-01-17 00:00:00.000+00')
+      )
+    ).find((x) => x.user_metadata_pubkey === expectedToBeEligible);
+    expect(actualLoan?.user_metadata_pubkey).toBe(expectedToBeEligible);
   });
 });
