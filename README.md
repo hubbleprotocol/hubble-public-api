@@ -50,6 +50,15 @@ docker-compose up -d
 
 API will be available at http://localhost:8888.
 
+### Tests
+
+We use a test database and migrations for integration tests that needs to be launched before running the tests:
+
+```shell
+docker-compose up test-db test-flyway -d
+npm test
+```
+
 ### Deployment
 
 Deployments are done automatically, everything that gets pushed to the `master` branch will be packaged as a docker container and pushed to Hubble's DockerHub.
