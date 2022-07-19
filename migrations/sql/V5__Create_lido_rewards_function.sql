@@ -32,8 +32,8 @@ BEGIN
                              join api.token tok on coll.token_id = tok.id
                              join api.owner o on o.id = l.owner_id
                              join api.cluster clus on clus.id = o.cluster_id
-                    where (lower(tok.name) = 'stsol' or lower(tok.name) = 'wsteth')
-                      and lower(clus.name) = lower(cluster_name)
+                    where (tok.name = 'STSOL' or tok.name = 'wstETH')
+                      and clus.name = lower(cluster_name)
                       and coll.deposited_quantity > 0
                       and l.created_on >= start_date
                       and l.created_on <= end_date
