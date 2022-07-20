@@ -13,6 +13,10 @@ export function getLidoEligibleLoansRedisKey(env: ENV, start: Date, end: Date) {
   return `lido-eligible-loans-${env}-${start.toISOString()}-${end.toISOString()}`;
 }
 
+export function getLidoEligibleMonthlyLoansRedisKey(env: ENV, year: string, month: string) {
+  return `lido-eligible-loans-${env}-${year}-${month}`;
+}
+
 export function getHbbStakersRedisKey(env: ENV) {
   return `stakers-hbb-${env}`;
 }

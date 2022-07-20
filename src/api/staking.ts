@@ -23,12 +23,14 @@ import { groupBy } from '../utils/arrayUtils';
 import { PublicKey } from '@solana/web3.js';
 import {
   LIDO_ELIGIBLE_LOANS_EXPIRY_IN_SECONDS,
+  LIDO_ELIGIBLE_LOANS_MONTHLY_EXPIRY_IN_SECONDS,
   LOANS_EXPIRY_IN_SECONDS,
   STAKING_STATS_EXPIRY_IN_SECONDS,
 } from '../constants/redis';
 import {
   getHbbStakersRedisKey,
   getLidoEligibleLoansRedisKey,
+  getLidoEligibleMonthlyLoansRedisKey,
   getLidoStakingRedisKey,
   getLoansRedisKey,
   getMetricsRedisKey,
@@ -100,7 +102,7 @@ stakingRoute.get(
 );
 
 /**
- * Get all loans that are eligible for LDO rewards
+ * Get all loans that are eligible for LDO rewards in a specific date range - private authorized route
  */
 stakingRoute.get(
   '/lido/eligible-loans',
@@ -138,6 +140,83 @@ stakingRoute.get(
     }
   }
 );
+
+interface YearMonthParams {
+  year: string;
+  month: string;
+}
+
+/**
+ * Get all loans that are eligible for LDO rewards for a specific year and month - public non-authorized route
+ */
+stakingRoute.get(
+  '/lido/eligible-loans/years/:year/months/:month',
+  middleware.validateSolanaCluster,
+  async (
+    request: Request<YearMonthParams, string | EligibleLoansResponse, never, EnvironmentQueryParams>,
+    response
+  ) => {
+    const { dateFrom, dateTo, message, success } = tryGetDateParams(request.params);
+    if (!success) {
+      response.status(badRequest).send(message);
+      return;
+    }
+    const [web3Client, env, error] = parseFromQueryParams({ env: request.query.env as ENV });
+    if (web3Client && env) {
+      const redisKey = getLidoEligibleMonthlyLoansRedisKey(env, request.params.year, request.params.month);
+      try {
+        const eligibleLoans = await redis.cacheFetchJson(redisKey, () => fetchEligibleLoans(env, dateFrom!, dateTo!), {
+          cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+          cacheExpirySeconds: LIDO_ELIGIBLE_LOANS_MONTHLY_EXPIRY_IN_SECONDS,
+        });
+        await sendWithCacheControl(redisKey, response, {
+          eligibleLoans: eligibleLoans.map((x) => x.user_metadata_pubkey),
+        });
+      } catch (e) {
+        logger.error(e);
+        response.status(internalError).send('Could not get eligible loans for lido rewards');
+      }
+    } else {
+      response.status(unprocessable).send(error);
+    }
+  }
+);
+
+function tryGetDateParams(params: YearMonthParams): {
+  success: boolean;
+  message: string | undefined;
+  dateFrom: Date | undefined;
+  dateTo: Date | undefined;
+} {
+  const month = +params.month;
+  const year = +params.year;
+  const currentDate = new Date();
+  const requestedDate = new Date(year, month - 1, 1, 0, 0, 0, 0);
+  if (
+    isNaN(year) ||
+    isNaN(month) ||
+    month === 0 ||
+    month > 12 ||
+    year < 2022 ||
+    year > currentDate.getFullYear() ||
+    (year === currentDate.getFullYear() && month - 1 > currentDate.getMonth())
+  ) {
+    return {
+      success: false,
+      message:
+        'Month path parameter must be in range 1-12 or not in the future. Year path parameter must be greater than or equal to 2022 or not in the future.',
+      dateFrom: undefined,
+      dateTo: undefined,
+    };
+  }
+
+  return {
+    success: true,
+    message: undefined,
+    dateFrom: requestedDate,
+    dateTo: new Date(year, month, 1, 0, 0, 0, 0),
+  };
+}
 
 /**
  * Get all HBB stakers
