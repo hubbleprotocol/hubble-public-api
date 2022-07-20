@@ -50,6 +50,10 @@ docker-compose up -d
 
 API will be available at http://localhost:8888.
 
+Some routes are protected by basic authentication - for local dev API you can use these credentials:
+- user: `hubble`
+- password: `development`
+
 ### Tests
 
 We use a test database and migrations for integration tests that needs to be launched before running the tests:
@@ -239,6 +243,8 @@ GET https://api.hubbleprotocol.io/staking/lido
 
 Get eligible loans for LIDO staking rewards for a specified time interval (start date is inclusive, end date is exclusive).
 If no start/end date is specified it will use `start date: today - 14 days` and `end date = today`.
+
+Please note: This route is not exposed to the public and requires basic authentication. 
 
 ```http request
 GET https://api.hubbleprotocol.io/staking/lido/eligible-loans?env=devnet&start=2022-06-01&end=2022-07-01

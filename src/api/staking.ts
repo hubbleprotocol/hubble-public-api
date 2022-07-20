@@ -99,26 +99,26 @@ stakingRoute.get(
   }
 );
 
-interface EligibleLoansQueryParams {
-  start: string | undefined;
-  end: string | undefined;
-  env: ENV | undefined;
-}
-
 /**
  * Get all loans that are eligible for LDO rewards
  */
 stakingRoute.get(
   '/lido/eligible-loans',
+  middleware.authorizedRoute,
   middleware.validateSolanaCluster,
-  async (request: Request<never, EligibleLoansResponse | string, never, EligibleLoansQueryParams>, response) => {
+  async (request, response) => {
     if ((request.query.start && !request.query.end) || (!request.query.start && request.query.end)) {
       response.status(badRequest).send('You must specify both start and end query params or none of them.');
       return;
     }
-    const startDate = request.query.start ? new Date(request.query.start) : subtractDays(new Date(), 14);
-    const endDate = request.query.end ? new Date(request.query.end) : new Date();
-    const [web3Client, env, error] = parseFromQueryParams({ env: request.query.env });
+    const startDate = request.query.start ? new Date(request.query.start as string) : subtractDays(new Date(), 14);
+    const endDate = request.query.end ? new Date(request.query.end as string) : new Date();
+    if (startDate >= endDate) {
+      response.status(badRequest).send('Start date must occur before end date.');
+      return;
+    }
+
+    const [web3Client, env, error] = parseFromQueryParams({ env: request.query.env as ENV });
     if (web3Client && env) {
       const redisKey = getLidoEligibleLoansRedisKey(env, startDate, endDate);
       try {

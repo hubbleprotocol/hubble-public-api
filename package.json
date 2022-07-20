@@ -63,6 +63,7 @@
     "d3-array": "2.12.1",
     "decimal.js": "^10.3.1",
     "express": "^4.17.3",
+    "express-basic-auth": "^1.2.1",
     "express-promise-router": "^4.1.1",
     "hdr-histogram-js": "^3.0.0",
     "ioredis": "^5.0.5",
