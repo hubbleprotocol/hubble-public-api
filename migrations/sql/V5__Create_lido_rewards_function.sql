@@ -7,20 +7,22 @@
       - end_date: timestamp with time zone that specifies the exclusive end of the time interval to check for eligible loans
       - cluster_name: solana cluster name (devnet, mainnet-beta,...)
   Returns:
-      - Table with rows with columns user_metadata_pubkey (loan identifier) and ldo_reward_amount (number of rewards to be distributed)
+      - Table with rows with columns user_metadata_pubkey (loan identifier), days_eligible and ldo_reward_amount (number of rewards to be distributed)
   Example:
-      - SELECT * FROM get_lido_eligible_loans('2022-06-20', '2022-07-01', 'mainnet-beta');
+      - SELECT * FROM api.get_lido_eligible_loans('2022-06-20', '2022-07-01', 'mainnet-beta');
  */
-CREATE FUNCTION api.get_lido_eligible_loans(start_date timestamp with time zone, end_date timestamp with time zone, cluster_name text)
+CREATE or replace FUNCTION api.get_lido_eligible_loans(start_date timestamp with time zone, end_date timestamp with time zone, cluster_name text)
     RETURNS TABLE
             (
-                user_metadata_pubkey text
+                user_metadata_pubkey text,
+                days_eligible        numeric,
+                ldo_reward_amount    numeric
             )
 AS
 $func$
 BEGIN
     RETURN QUERY
-        select res.user_metadata_pubkey
+        select res.user_metadata_pubkey, (res.to_date::date - res.from_date::date)::numeric as days_eligible, 0::numeric as ldo_reward_amount --TODO
         from (select res.user_metadata_pubkey,
                      res.token_id,
                      (percentile_cont(0.50) within group (order by res.median_coll_price)
@@ -43,14 +45,13 @@ BEGIN
                     where (tok.name = 'STSOL'
                         or tok.name = 'wstETH')
                       and clus.name = lower(cluster_name)
-                      and coll.deposited_quantity
-                        > 0
+                      and coll.deposited_quantity > 0
                       and l.created_on >= start_date
                       and l.created_on <= end_date
                     group by 1, 2, 3) res
               group by 1, 2) res
         group by 1, res.to_date, res.from_date
         having sum(median_coll_percent) >= 0.4
-           and (res.to_date::date - res.from_date::date) >= (end_date::date - start_date::date) - 1;
+           and (res.to_date::date - res.from_date::date) > 0;
 END
 $func$ LANGUAGE plpgsql;
