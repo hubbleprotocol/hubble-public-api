@@ -7,35 +7,35 @@
       - end_date: timestamp with time zone that specifies the exclusive end of the time interval to check for eligible loans
       - cluster_name: solana cluster name (devnet, mainnet-beta,...)
   Returns:
-      - Table with rows with columns user_metadata_pubkey (loan identifier), days_eligible and ldo_reward_amount (number of rewards to be distributed)
+      - Table with rows with columns user_metadata_pubkey (loan identifier) and days_eligible.
   Example:
       - SELECT * FROM api.get_lido_eligible_loans('2022-06-20', '2022-07-01', 'mainnet-beta');
  */
-CREATE or replace FUNCTION api.get_lido_eligible_loans(start_date timestamp with time zone, end_date timestamp with time zone, cluster_name text)
+CREATE FUNCTION api.get_lido_eligible_loans(start_date timestamp with time zone, end_date timestamp with time zone, cluster_name text)
     RETURNS TABLE
             (
                 user_metadata_pubkey text,
-                days_eligible        numeric,
-                ldo_reward_amount    numeric
+                days_eligible        numeric
             )
 AS
 $func$
 BEGIN
     RETURN QUERY
-        select res.user_metadata_pubkey, (res.to_date::date - res.from_date::date)::numeric as days_eligible, 0::numeric as ldo_reward_amount --TODO
+        select res.user_metadata_pubkey, res.days_eligible
         from (select res.user_metadata_pubkey,
                      res.token_id,
                      (percentile_cont(0.50) within group (order by res.median_coll_price)
                          * percentile_cont(0.50) within group (order by res.median_coll_quantity))
                          / percentile_cont(0.50) within group (order by res.median_total_coll_value) as median_coll_percent,
-                     min(day)                                                                        as from_date,
-                     max(day)                                                                        as to_date
+                     count(res.user_metadata_pubkey)::numeric                                        as days_eligible,
+                     percentile_cont(0.50) within group (order by res.median_usdh_debt)
               from (select date_trunc('day', l.created_on)                                        as day,
                            l.user_metadata_pubkey,
                            coll.token_id,
                            percentile_cont(0.50) within group (order by coll.price)               as median_coll_price,
                            percentile_cont(0.50) within group (order by coll.deposited_quantity)  as median_coll_quantity,
-                           percentile_cont(0.50) within group (order by l.total_collateral_value) as median_total_coll_value
+                           percentile_cont(0.50) within group (order by l.total_collateral_value) as median_total_coll_value,
+                           percentile_cont(0.50) within group (order by l.usdh_debt)              as median_usdh_debt
                     from api.loan l
                              join api.collateral coll
                                   on l.id = coll.loan_id
@@ -50,8 +50,7 @@ BEGIN
                       and l.created_on <= end_date
                     group by 1, 2, 3) res
               group by 1, 2) res
-        group by 1, res.to_date, res.from_date
-        having sum(median_coll_percent) >= 0.4
-           and (res.to_date::date - res.from_date::date) > 0;
+        group by 1, 2
+        having sum(median_coll_percent) >= 0.4;
 END
 $func$ LANGUAGE plpgsql;
