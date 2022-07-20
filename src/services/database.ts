@@ -180,12 +180,48 @@ export const getMetricsBetween = async (cluster: ENV, from: Date, to: Date) => {
   return snapshots;
 };
 
-export interface LoanResult {
+interface LoanResult {
+  day: Date;
   user_metadata_pubkey: string;
+  median_usdh_debt: Decimal;
 }
 
-export const getLidoEligibleLoans = async (env: ENV, start: Date, end: Date) => {
-  const query = await postgres.raw(`SELECT * from ${API_SCHEMA}.get_lido_eligible_loans(?, ?, ?)`, [start, end, env]);
-  const result: LoanResult[] = query.rows.map((x: LoanResult) => x);
-  return result;
+export interface EligibleLoan {
+  userMetadataPubkey: string;
+  ldoRewardsEarned: Decimal;
+  daysEligible: Decimal;
+}
+
+export const getLidoEligibleLoans = async (env: ENV, start: Date, end: Date): Promise<EligibleLoan[]> => {
+  const query = await postgres.raw(`SELECT * from ${API_SCHEMA}.get_lido_usdh_debt(?, ?, ?)`, [start, end, env]);
+  const result: LoanResult[] = query.rows.map((x: LoanResult) => ({
+    day: x.day,
+    user_metadata_pubkey: x.user_metadata_pubkey,
+    median_usdh_debt: new Decimal(x.median_usdh_debt),
+  }));
+  const dailyLdoDistributed = new Decimal(150);
+  const eligibleLoans: { [userMetadata: string]: { rewards: Decimal; days: Decimal } } = {};
+  for (const [day, loans] of groupBy(result, (x) => x.day.valueOf())) {
+    let dailySum = new Decimal(0);
+    for (const loan of loans) {
+      dailySum = dailySum.add(loan.median_usdh_debt);
+    }
+    for (const loan of loans) {
+      const ldoRewards = loan.median_usdh_debt.dividedBy(dailySum).mul(dailyLdoDistributed);
+      if (eligibleLoans[loan.user_metadata_pubkey]) {
+        eligibleLoans[loan.user_metadata_pubkey].rewards =
+          eligibleLoans[loan.user_metadata_pubkey].rewards.add(ldoRewards);
+        eligibleLoans[loan.user_metadata_pubkey].days = eligibleLoans[loan.user_metadata_pubkey].days.add(1);
+      } else {
+        eligibleLoans[loan.user_metadata_pubkey] = {
+          days: new Decimal(1),
+          rewards: ldoRewards,
+        };
+      }
+    }
+  }
+  return Object.entries(eligibleLoans).map(
+    ([pubkey, loan]) =>
+      ({ ldoRewardsEarned: loan.rewards, userMetadataPubkey: pubkey, daysEligible: loan.days } as EligibleLoan)
+  );
 };

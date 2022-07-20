@@ -124,12 +124,16 @@ stakingRoute.get(
     if (web3Client && env) {
       const redisKey = getLidoEligibleLoansRedisKey(env, startDate, endDate);
       try {
-        const eligibleLoans = await redis.cacheFetchJson(redisKey, () => fetchEligibleLoans(env, startDate, endDate), {
-          cacheExpiryType: CacheExpiryType.ExpireInSeconds,
-          cacheExpirySeconds: LIDO_ELIGIBLE_LOANS_EXPIRY_IN_SECONDS,
-        });
+        const eligibleLoans = await redis.cacheFetchJson(
+          redisKey,
+          () => getLidoEligibleLoans(env, startDate, endDate),
+          {
+            cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+            cacheExpirySeconds: LIDO_ELIGIBLE_LOANS_EXPIRY_IN_SECONDS,
+          }
+        );
         await sendWithCacheControl(redisKey, response, {
-          eligibleLoans: eligibleLoans.map((x) => x.user_metadata_pubkey),
+          eligibleLoans,
         });
       } catch (e) {
         logger.error(e);
@@ -165,12 +169,16 @@ stakingRoute.get(
     if (web3Client && env) {
       const redisKey = getLidoEligibleMonthlyLoansRedisKey(env, request.params.year, request.params.month);
       try {
-        const eligibleLoans = await redis.cacheFetchJson(redisKey, () => fetchEligibleLoans(env, dateFrom!, dateTo!), {
-          cacheExpiryType: CacheExpiryType.ExpireInSeconds,
-          cacheExpirySeconds: LIDO_ELIGIBLE_LOANS_MONTHLY_EXPIRY_IN_SECONDS,
-        });
+        const eligibleLoans = await redis.cacheFetchJson(
+          redisKey,
+          () => getLidoEligibleLoans(env, dateFrom!, dateTo!),
+          {
+            cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+            cacheExpirySeconds: LIDO_ELIGIBLE_LOANS_MONTHLY_EXPIRY_IN_SECONDS,
+          }
+        );
         await sendWithCacheControl(redisKey, response, {
-          eligibleLoans: eligibleLoans.map((x) => x.user_metadata_pubkey),
+          eligibleLoans,
         });
       } catch (e) {
         logger.error(e);
@@ -269,10 +277,6 @@ stakingRoute.get(
     }
   }
 );
-
-async function fetchEligibleLoans(env: ENV, start: Date, end: Date) {
-  return await getLidoEligibleLoans(env, start, end);
-}
 
 async function fetchHbbStakers(env: ENV, web3Client: Web3Client) {
   const hbbStakers: StakingUserResponse[] = [];
