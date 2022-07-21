@@ -1,6 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import { ENV } from '../../services/web3/client';
 import { badRequest } from '../../utils/apiUtils';
+import * as basicAuth from 'express-basic-auth';
+import { getEnvOrThrowInProduction } from '../../utils/envUtils';
 
 const validateSolanaCluster = (req: Request<any, any, any, any, any>, res: Response, next: NextFunction) => {
   if (req.query.env) {
@@ -22,4 +24,10 @@ const validateSolanaCluster = (req: Request<any, any, any, any, any>, res: Respo
   }
 };
 
-export const middleware = { validateSolanaCluster };
+const authorizedRoute = basicAuth.default({
+  challenge: true,
+  users: { hubble: getEnvOrThrowInProduction('AUTH_KEY', 'development') },
+  unauthorizedResponse: 'Not authorized for this request. Please include the basic auth headers.',
+});
+
+export const middleware = { validateSolanaCluster, authorizedRoute };

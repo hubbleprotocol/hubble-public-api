@@ -1,10 +1,16 @@
 import Router from 'express-promise-router';
 import { Request, Response } from 'express';
 import EnvironmentQueryParams from '../models/api/EnvironmentQueryParams';
-import { internalError, parseFromQueryParams, sendWithCacheControl, unprocessable } from '../utils/apiUtils';
+import {
+  badRequest,
+  internalError,
+  parseFromQueryParams,
+  sendWithCacheControl,
+  unprocessable,
+} from '../utils/apiUtils';
 import { Hubble } from '@hubbleprotocol/hubble-sdk';
 import { StakingResponse } from '../models/api/StakingResponse';
-import logger, { logObject } from '../services/logger';
+import logger from '../services/logger';
 import Decimal from 'decimal.js';
 import { getMetrics } from './metrics';
 import GlobalConfig from '@hubbleprotocol/hubble-sdk/dist/models/GlobalConfig';
@@ -15,21 +21,30 @@ import redis, { CacheExpiryType } from '../services/redis/redis';
 import { StakingUserResponse } from '../models/api/StakingUserResponse';
 import { groupBy } from '../utils/arrayUtils';
 import { PublicKey } from '@solana/web3.js';
-import { LOANS_EXPIRY_IN_SECONDS, STAKING_STATS_EXPIRY_IN_SECONDS } from '../constants/redis';
+import {
+  LIDO_ELIGIBLE_LOANS_EXPIRY_IN_SECONDS,
+  LIDO_ELIGIBLE_LOANS_MONTHLY_EXPIRY_IN_SECONDS,
+  LOANS_EXPIRY_IN_SECONDS,
+  STAKING_STATS_EXPIRY_IN_SECONDS,
+} from '../constants/redis';
 import {
   getHbbStakersRedisKey,
+  getLidoEligibleLoansRedisKey,
+  getLidoEligibleMonthlyLoansRedisKey,
   getLidoStakingRedisKey,
   getLoansRedisKey,
   getMetricsRedisKey,
   getStakingRedisKey,
   getUsdhStakersRedisKey,
 } from '../services/redis/keyProvider';
-import { getMetricsBetween } from '../services/database';
+import { getLidoEligibleLoans, getMetricsBetween } from '../services/database';
 import { middleware } from './middleware/middleware';
 import { Scope, ScopeToken } from '@hubbleprotocol/scope-sdk';
 import { LidoResponse } from '../models/api/LidoResponse';
 import { fetchAllLoans } from './loans';
 import { getLoanCollateralDistribution } from '../utils/calculations';
+import EligibleLoansResponse from '../models/api/EligibleLoansResponse';
+import { subtractDays } from '../utils/dateUtils';
 
 /**
  * Get staking stats of HBB and USDH (APR+APY)
@@ -60,6 +75,9 @@ stakingRoute.get(
   }
 );
 
+/**
+ * Get LIDO rewards stats
+ */
 stakingRoute.get(
   '/lido',
   middleware.validateSolanaCluster,
@@ -82,6 +100,131 @@ stakingRoute.get(
     }
   }
 );
+
+/**
+ * Get all loans that are eligible for LDO rewards in a specific date range - private authorized route
+ */
+stakingRoute.get(
+  '/lido/eligible-loans',
+  middleware.authorizedRoute,
+  middleware.validateSolanaCluster,
+  async (request, response) => {
+    if ((request.query.start && !request.query.end) || (!request.query.start && request.query.end)) {
+      response.status(badRequest).send('You must specify both start and end query params or none of them.');
+      return;
+    }
+    const startDate = request.query.start ? new Date(request.query.start as string) : subtractDays(new Date(), 14);
+    const endDate = request.query.end ? new Date(request.query.end as string) : new Date();
+    if (startDate >= endDate) {
+      response.status(badRequest).send('Start date must occur before end date.');
+      return;
+    }
+
+    const [web3Client, env, error] = parseFromQueryParams({ env: request.query.env as ENV });
+    if (web3Client && env) {
+      const redisKey = getLidoEligibleLoansRedisKey(env, startDate, endDate);
+      try {
+        const eligibleLoans = await redis.cacheFetchJson(
+          redisKey,
+          () => getLidoEligibleLoans(env, startDate, endDate),
+          {
+            cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+            cacheExpirySeconds: LIDO_ELIGIBLE_LOANS_EXPIRY_IN_SECONDS,
+          }
+        );
+        await sendWithCacheControl(redisKey, response, {
+          eligibleLoans,
+        });
+      } catch (e) {
+        logger.error(e);
+        response.status(internalError).send('Could not get eligible loans for lido rewards');
+      }
+    } else {
+      response.status(unprocessable).send(error);
+    }
+  }
+);
+
+interface YearMonthParams {
+  year: string;
+  month: string;
+}
+
+/**
+ * Get all loans that are eligible for LDO rewards for a specific year and month - public non-authorized route
+ */
+stakingRoute.get(
+  '/lido/eligible-loans/years/:year/months/:month',
+  middleware.validateSolanaCluster,
+  async (
+    request: Request<YearMonthParams, string | EligibleLoansResponse, never, EnvironmentQueryParams>,
+    response
+  ) => {
+    const { dateFrom, dateTo, message, success } = tryGetDateParams(request.params);
+    if (!success) {
+      response.status(badRequest).send(message);
+      return;
+    }
+    const [web3Client, env, error] = parseFromQueryParams({ env: request.query.env as ENV });
+    if (web3Client && env) {
+      const redisKey = getLidoEligibleMonthlyLoansRedisKey(env, request.params.year, request.params.month);
+      try {
+        const eligibleLoans = await redis.cacheFetchJson(
+          redisKey,
+          () => getLidoEligibleLoans(env, dateFrom!, dateTo!),
+          {
+            cacheExpiryType: CacheExpiryType.ExpireInSeconds,
+            cacheExpirySeconds: LIDO_ELIGIBLE_LOANS_MONTHLY_EXPIRY_IN_SECONDS,
+          }
+        );
+        await sendWithCacheControl(redisKey, response, {
+          eligibleLoans,
+        });
+      } catch (e) {
+        logger.error(e);
+        response.status(internalError).send('Could not get eligible loans for lido rewards');
+      }
+    } else {
+      response.status(unprocessable).send(error);
+    }
+  }
+);
+
+function tryGetDateParams(params: YearMonthParams): {
+  success: boolean;
+  message: string | undefined;
+  dateFrom: Date | undefined;
+  dateTo: Date | undefined;
+} {
+  const month = +params.month;
+  const year = +params.year;
+  const currentDate = new Date();
+  const requestedDate = new Date(year, month - 1, 1, 0, 0, 0, 0);
+  if (
+    isNaN(year) ||
+    isNaN(month) ||
+    month === 0 ||
+    month > 12 ||
+    year < 2022 ||
+    year > currentDate.getFullYear() ||
+    (year === currentDate.getFullYear() && month - 1 > currentDate.getMonth())
+  ) {
+    return {
+      success: false,
+      message:
+        'Month path parameter must be in range 1-12 or not in the future. Year path parameter must be greater than or equal to 2022 or not in the future.',
+      dateFrom: undefined,
+      dateTo: undefined,
+    };
+  }
+
+  return {
+    success: true,
+    message: undefined,
+    dateFrom: requestedDate,
+    dateTo: new Date(year, month, 1, 0, 0, 0, 0),
+  };
+}
 
 /**
  * Get all HBB stakers

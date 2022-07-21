@@ -50,6 +50,19 @@ docker-compose up -d
 
 API will be available at http://localhost:8888.
 
+Some routes are protected by basic authentication - for local dev API you can use these credentials:
+- user: `hubble`
+- password: `development`
+
+### Tests
+
+We use a test database and migrations for integration tests that needs to be launched before running the tests:
+
+```shell
+docker-compose up test-db test-flyway -d
+npm test
+```
+
 ### Deployment
 
 Deployments are done automatically, everything that gets pushed to the `master` branch will be packaged as a docker container and pushed to Hubble's DockerHub.
@@ -226,4 +239,21 @@ Get LIDO staking rewards (APR + APY):
 
 ```http request
 GET https://api.hubbleprotocol.io/staking/lido
+```
+
+Get eligible loans for LIDO staking rewards for a specified month and year. 
+Months are to be input from 1 (January) - 12 (December) and years from 2022 and above.
+
+```http request
+GET https://api.hubbleprotocol.io/staking/lido/eligible-loans/years/2022/months/07?env=devnet
+```
+
+Get eligible loans for LIDO staking rewards for a specified time interval (start date is inclusive, end date is exclusive).
+If no start/end date is specified it will use `start date: today - 14 days` and `end date = today`.
+
+Please note: This route is not exposed to the public and requires basic authentication.
+Please use the route above to get monthly data instead.
+
+```http request
+GET https://api.hubbleprotocol.io/staking/lido/eligible-loans?env=devnet&start=2022-06-01&end=2022-07-01
 ```

@@ -76,6 +76,11 @@ service-base-chart:
         secretKeyRef:
           name: hubble-public-api-secret
           key: POSTGRES_CONNECTION_STRING
+    - name: AUTH_KEY
+      valueFrom:
+        secretKeyRef:
+          name: hubble-public-api-secret
+          key: AUTH_KEY
     - name: COIN_STATS_TABLE
       value: "coin-stats-dev"
     - name: REDIS_PORT
@@ -96,6 +101,7 @@ service-base-chart:
     MIGRATION_POSTGRES_URL: # example: jdbc:postgresql://host:5432/dbName
     # required for API:
     POSTGRES_CONNECTION_STRING: # example: postgres://user:pass@host:5432/dbName
+    AUTH_KEY:
 
 redis:
   architecture: replication

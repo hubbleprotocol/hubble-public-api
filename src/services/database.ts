@@ -54,6 +54,15 @@ export const testDbConnection = async (): Promise<any> => {
   }
 };
 
+export const disconnect = (): Promise<void> => {
+  try {
+    return postgres.destroy();
+  } catch (err) {
+    logger.error('could not disconnect from postgres', err);
+    throw err;
+  }
+};
+
 type JoinedLoanRow = {
   usdh_debt: string;
   total_collateral_value: string;
@@ -171,11 +180,48 @@ export const getMetricsBetween = async (cluster: ENV, from: Date, to: Date) => {
   return snapshots;
 };
 
-export const getLidoTotalInvestment = () => {
-  // 1. get total investment
-  // SQL query: get hubble loans that have existed for the past 14 days, -14days from the latest snapshots
-  // filter these loans on sql side:
-  // - during these 14 days loans need to have had >= 40% LTV, otherwise they aren't eligible
-  // - they also need to hold 40% of total collateral value in stSOL or wstETH
-  // return sum of all USDH debt -> this is total investment value
+interface LoanResult {
+  day: Date;
+  user_metadata_pubkey: string;
+  median_usdh_debt: Decimal;
+}
+
+export interface EligibleLoan {
+  userMetadataPubkey: string;
+  ldoRewardsEarned: Decimal;
+  daysEligible: Decimal;
+}
+
+export const getLidoEligibleLoans = async (env: ENV, start: Date, end: Date): Promise<EligibleLoan[]> => {
+  const query = await postgres.raw(`SELECT * from ${API_SCHEMA}.get_lido_usdh_debt(?, ?, ?)`, [start, end, env]);
+  const result: LoanResult[] = query.rows.map((x: LoanResult) => ({
+    day: x.day,
+    user_metadata_pubkey: x.user_metadata_pubkey,
+    median_usdh_debt: new Decimal(x.median_usdh_debt),
+  }));
+  const dailyLdoDistributed = new Decimal(150);
+  const eligibleLoans: { [userMetadata: string]: { rewards: Decimal; days: Decimal } } = {};
+  for (const [day, loans] of groupBy(result, (x) => x.day.valueOf())) {
+    let dailySum = new Decimal(0);
+    for (const loan of loans) {
+      dailySum = dailySum.add(loan.median_usdh_debt);
+    }
+    for (const loan of loans) {
+      const ldoRewards = loan.median_usdh_debt.dividedBy(dailySum).mul(dailyLdoDistributed);
+      if (eligibleLoans[loan.user_metadata_pubkey]) {
+        eligibleLoans[loan.user_metadata_pubkey].rewards =
+          eligibleLoans[loan.user_metadata_pubkey].rewards.add(ldoRewards);
+        eligibleLoans[loan.user_metadata_pubkey].days = eligibleLoans[loan.user_metadata_pubkey].days.add(1);
+      } else {
+        eligibleLoans[loan.user_metadata_pubkey] = {
+          days: new Decimal(1),
+          rewards: ldoRewards,
+        };
+      }
+    }
+  }
+  return Object.entries(eligibleLoans).map(
+    ([pubkey, loan]) =>
+      ({ ldoRewardsEarned: loan.rewards, userMetadataPubkey: pubkey, daysEligible: loan.days } as EligibleLoan)
+  );
 };
